@@ -1,3 +1,4 @@
+import math
 import os
 import pprint
 import google_auth_oauthlib.flow
@@ -71,15 +72,23 @@ def save_data(data, channel_id):
     with open('channel_cache/data_' + channel_id, 'w', encoding='utf-8') as f:
         f.write(str(data))
 
-def get_data_from_youtube(channel_id):
-    data = {video_id: transcription for video_id, transcription in get_transcriptions(get_full_video_list(channel_id, get_youtube()))}
-    save_data(data, channel_id)
     return data
 
+def get_data_from_youtube(channel_id):
+    return save_data({video_id: transcription for video_id, transcription in get_transcriptions(get_full_video_list(channel_id, get_youtube()))}, channel_id)
+
+
+def searchString(query, channel_id):
+    return [f'https://youtu.be/{video_id}?t={math.floor(transcription["start"])}' for video_id, transcriptions in get_transcription_data(channel_id).items() if transcriptions for transcription in transcriptions if query.lower() in transcription['text'].lower()]
+
+
+def print_search_results(search_response):
+    for link in search_response:
+        print(link)
 
 def main():
 
-    pp.pprint(get_transcription_data("UCoZoRz4-y6r87ptDp4Jk74g"))
+    print_search_results(searchString("motifs indiens", 'UCoZoRz4-y6r87ptDp4Jk74g'))
 
 
 if __name__ == "__main__":
