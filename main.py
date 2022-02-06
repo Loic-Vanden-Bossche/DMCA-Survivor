@@ -38,21 +38,48 @@ def get_transcriptions(videos_data):
             yield data
 
 
-def main():
+def get_youtube():
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     api_service_name = "youtube"
     api_version = "v3"
     client_secrets_file = "secrets/code_secret_client_818316336553-0okberju6cmr65vs4qqdtuq5tmgmplsp.apps.googleusercontent.com.json"
 
-    flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-        client_secrets_file, scopes)
+    flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(client_secrets_file, scopes)
     credentials = flow.run_console()
-    youtube = googleapiclient.discovery.build(
-        api_service_name, api_version, credentials=credentials)
+    return googleapiclient.discovery.build(api_service_name, api_version, credentials=credentials)
 
-    dict = {video_id: transcription for video_id, transcription in get_transcriptions(get_full_video_list("UCoZoRz4-y6r87ptDp4Jk74g", youtube))}
-    pp.pprint(dict)
+
+def getFiles():
+    return [f for f in os.listdir('channel_cache') if os.path.isfile(os.path.join('channel_cache', f)) and f.startswith('data_')]
+
+
+def get_transcription_data(channel_id):
+    channel = next((x for x in getFiles() if x == 'data_' + channel_id), None)
+
+    if channel:
+        try:
+            with open('channel_cache/' + channel, 'r', encoding='utf-8') as f:
+                return eval(f.read())
+        except SyntaxError:
+            print('Invalid data ... deleting')
+            os.remove('channel_cache/' + channel)
+
+    return get_data_from_youtube(channel_id)
+
+def save_data(data, channel_id):
+    with open('channel_cache/data_' + channel_id, 'w', encoding='utf-8') as f:
+        f.write(str(data))
+
+def get_data_from_youtube(channel_id):
+    data = {video_id: transcription for video_id, transcription in get_transcriptions(get_full_video_list(channel_id, get_youtube()))}
+    save_data(data, channel_id)
+    return data
+
+
+def main():
+
+    pp.pprint(get_transcription_data("UCoZoRz4-y6r87ptDp4Jk74g"))
 
 
 if __name__ == "__main__":
