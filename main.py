@@ -16,6 +16,11 @@ pp = pprint.PrettyPrinter(indent=4)
 
 t_lang = 'en'
 
+
+def get_progress(curr, total):
+    return f'{str(curr).zfill(len(str(total)))}/{total}'
+
+
 def get_full_video_list_from_yt(channel_id, youtube, pg_token=None):
     pg_data = youtube.search().list(
         part="id, snippet",
@@ -24,7 +29,15 @@ def get_full_video_list_from_yt(channel_id, youtube, pg_token=None):
         pageToken=pg_token
     ).execute()
 
-    return dict({item["id"]["videoId"]: item["snippet"]["title"] for item in pg_data["items"] if item["id"]["kind"] == "youtube#video"}, **(get_full_video_list_from_yt(channel_id, youtube, pg_data.get("nextPageToken")) if pg_data.get("nextPageToken") else {}))
+    return dict(
+        {
+            item["id"]["videoId"]: item["snippet"]["title"] for
+            item in pg_data["items"] if item["id"]["kind"] == "youtube#video"
+        },
+        **(get_full_video_list_from_yt(channel_id, youtube, pg_data.get("nextPageToken"))
+           if pg_data.get("nextPageToken")
+           else {})
+    )
 
 
 def get_transcription_from_yt(video_id):
@@ -40,7 +53,9 @@ def get_transcriptions_from_ytb(videos_data):
         for data in pool.imap_unordered(get_transcription_from_yt, videos_data.keys()):
             i += 1
             video_id, transcription = data
-            print(f'{str(i).zfill(len(str(len(videos_data))))}/{len(videos_data)} -> {"" if transcription else "FAILED"} -> {videos_data.get(video_id)}')
+            print(f'{get_progress(i, len(videos_data))} ->'
+                  f' {"" if transcription else "FAILED"} ->'
+                  f' {videos_data.get(video_id)}')
             yield data
 
 
@@ -63,8 +78,6 @@ def getFiles(folder):
 def get_data_from_file(channel_id, folder):
     file = next((x for x in getFiles(folder) if x == 'data_' + channel_id), None)
 
-    print(file)
-
     if file:
         try:
             with open(f'{folder}/{file}', 'r', encoding='utf-8') as f:
@@ -84,6 +97,9 @@ def get_transcriptions_data(channel_id):
 
 
 def save_data(data, channel_id, folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
     with open(f'{folder}/data_{channel_id}', 'w', encoding='utf-8') as f:
         f.write(str(data))
 
@@ -91,23 +107,32 @@ def save_data(data, channel_id, folder):
 
 
 def get_transcriptions_data_from_ytb(channel_id):
-    return save_data({video_id: transcription for video_id, transcription in get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id, get_ytb()))}, channel_id, 'channel_cache')
+    return save_data({video_id: transcription for video_id, transcription in
+                      get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id, get_ytb()))}, channel_id,
+                     'channel_cache')
 
 
 def searchString(query, channel_id):
-    return [f'https://youtu.be/{video_id}?t={math.floor(transcription["start"])}' for video_id, transcriptions in get_transcriptions_data(channel_id).items() if transcriptions for transcription in transcriptions if query.lower() in transcription['text'].lower()]
+    return [f'https://youtu.be/{video_id}?t={math.floor(transcription["start"])}' for video_id, transcriptions in
+            get_transcriptions_data(channel_id).items() if transcriptions for transcription in transcriptions if
+            query.lower() in transcription['text'].lower()]
 
 
 def flatten(t):
     return [item for sublist in t for item in sublist]
 
 
-def part_str(str, n):
-    return [str[i:i+n] for i in range(0, len(str), n)]
+def part_str(f_str, n):
+    chunk_len = len(f_str) // n
+    return [f_str[idx: idx + chunk_len] for idx in range(0, len(f_str), chunk_len)]
 
 
 def get_transcriptions_str(channel_id):
-    return functools.reduce(lambda a, b: a + f' {b}', [i['text'] for i in flatten([t for t in get_transcriptions_data(channel_id).values() if t is not None])])
+    return functools.reduce(lambda a, b: a + f' {b}',
+                            [
+                                i['text'] for i in
+                                flatten([t for t in get_transcriptions_data(channel_id).values() if t is not None])
+                            ])
 
 
 def get_unique(arr):
@@ -119,13 +144,34 @@ def set_lang(lang):
     t_lang = lang
 
 
-def get_people_names(channel_id, lang, max_str_size=1000000):
+def get_parted_names(nlp, tag_name, parted_str):
+    return [ent.text.strip() for ent in nlp(parted_str).ents if ent.label_ == tag_name]
+
+
+def get_people_names(channel_id, lang):
     try:
         return get_data_from_file(channel_id, 'names_cache')
     except FileNotFoundError:
+
+        def print_progress(i, n, data):
+            i += 1
+            print(get_progress(i, n))
+            return data
+
         nlp, tag_name, lang = spacy_init(lang)
         set_lang(lang)
-        return save_data(get_unique(flatten([[ent.text.strip() for ent in nlp(s).ents if ent.label_ == tag_name] for s in part_str(get_transcriptions_str(channel_id), max_str_size)])), channel_id, 'names_cache')
+
+        parted_str = part_str(get_transcriptions_str(channel_id), 100)
+
+        return save_data(get_unique(flatten(
+            [
+                print_progress(i, len(parted_str), data) for
+                i, data in
+                enumerate(ThreadPool(len(parted_str)).imap_unordered(
+                    functools.partial(get_parted_names, nlp, tag_name), parted_str)
+                )
+            ]
+        )), channel_id, 'names_cache')
 
 
 def spacy_init(lang='en'):
@@ -143,7 +189,6 @@ def spacy_init(lang='en'):
 
 
 def main():
-
     # Palamashow : UCoZoRz4-y6r87ptDp4Jk74g
     # Les kassos : UCv88958LRDfndKV_Y7XmAnA
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
