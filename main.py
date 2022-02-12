@@ -14,6 +14,8 @@ scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
 pp = pprint.PrettyPrinter(indent=4)
 
+t_lang = 'en'
+
 def get_full_video_list_from_yt(channel_id, youtube, pg_token=None):
     pg_data = youtube.search().list(
         part="id, snippet",
@@ -27,7 +29,7 @@ def get_full_video_list_from_yt(channel_id, youtube, pg_token=None):
 
 def get_transcription_from_yt(video_id):
     try:
-        return video_id, YouTubeTranscriptApi.get_transcript(video_id, ['fr'])
+        return video_id, YouTubeTranscriptApi.get_transcript(video_id, [t_lang])
     except (ValueError, Exception):
         return video_id, None
 
@@ -54,33 +56,42 @@ def get_ytb():
     return googleapiclient.discovery.build(api_service_name, api_version, credentials=credentials)
 
 
-def getFiles():
-    return [f for f in os.listdir('channel_cache') if os.path.isfile(os.path.join('channel_cache', f)) and f.startswith('data_')]
+def getFiles(folder):
+    return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith('data_')]
 
 
-def get_transcriptions_data(channel_id):
-    channel = next((x for x in getFiles() if x == 'data_' + channel_id), None)
+def get_data_from_file(channel_id, folder):
+    file = next((x for x in getFiles(folder) if x == 'data_' + channel_id), None)
 
-    if channel:
+    print(file)
+
+    if file:
         try:
-            with open('channel_cache/' + channel, 'r', encoding='utf-8') as f:
+            with open(f'{folder}/{file}', 'r', encoding='utf-8') as f:
                 return eval(f.read())
         except SyntaxError:
             print('Invalid data ... deleting')
-            os.remove('channel_cache/' + channel)
+            os.remove(f'{folder}/{file}')
 
-    return get_data_from_ytb(channel_id)
+    raise FileNotFoundError('File not found or invalid data')
 
 
-def save_data(data, channel_id):
-    with open('channel_cache/data_' + channel_id, 'w', encoding='utf-8') as f:
+def get_transcriptions_data(channel_id):
+    try:
+        return get_data_from_file(channel_id, 'channel_cache')
+    except FileNotFoundError:
+        return get_transcriptions_data_from_ytb(channel_id)
+
+
+def save_data(data, channel_id, folder):
+    with open(f'{folder}/data_{channel_id}', 'w', encoding='utf-8') as f:
         f.write(str(data))
 
     return data
 
 
-def get_data_from_ytb(channel_id):
-    return save_data({video_id: transcription for video_id, transcription in get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id, get_ytb()))}, channel_id)
+def get_transcriptions_data_from_ytb(channel_id):
+    return save_data({video_id: transcription for video_id, transcription in get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id, get_ytb()))}, channel_id, 'channel_cache')
 
 
 def searchString(query, channel_id):
@@ -103,17 +114,42 @@ def get_unique(arr):
     return list(dict.fromkeys(arr))
 
 
-def get_people_names(channel_id, nlp, max_str_size=1000000):
-    return get_unique(flatten([[ent.text.strip() for ent in nlp(s).ents if ent.label_ == 'PER'] for s in part_str(get_transcriptions_str(channel_id), max_str_size)]))
+def set_lang(lang):
+    global t_lang
+    t_lang = lang
+
+
+def get_people_names(channel_id, lang, max_str_size=1000000):
+    try:
+        return get_data_from_file(channel_id, 'names_cache')
+    except FileNotFoundError:
+        nlp, tag_name, lang = spacy_init(lang)
+        set_lang(lang)
+        return save_data(get_unique(flatten([[ent.text.strip() for ent in nlp(s).ents if ent.label_ == tag_name] for s in part_str(get_transcriptions_str(channel_id), max_str_size)])), channel_id, 'names_cache')
+
+
+def spacy_init(lang='en'):
+    try:
+        lang = lang.lower()
+        model_name, tag_name = {
+            'en': ('en_core_web_lg', 'PERSON'),
+            'fr': ('fr_core_news_lg', 'PER')
+        }[lang]
+        print(f'No cache found, creating with model {model_name} ...')
+        return spacy.load(model_name), tag_name, lang
+    except KeyError:
+        print('Language not supported, using default')
+        return spacy.load('en_core_web_lg'), 'PERSON', 'en'
 
 
 def main():
 
     # Palamashow : UCoZoRz4-y6r87ptDp4Jk74g
     # Les kassos : UCv88958LRDfndKV_Y7XmAnA
+    # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
 
-    for name in get_people_names('UCoZoRz4-y6r87ptDp4Jk74g', spacy.load("fr_core_news_lg")):
+    for name in get_people_names('UCoZoRz4-y6r87ptDp4Jk74g', 'fr'):
         print(name)
 
 
