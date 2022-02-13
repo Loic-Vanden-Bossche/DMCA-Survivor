@@ -2,6 +2,7 @@
 secrets
 channel_cache
 names_cache
+background_cache
 .idea
 
 # Byte-compiled / optimized / DLL files
