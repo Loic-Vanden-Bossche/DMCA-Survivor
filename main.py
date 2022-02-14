@@ -1,12 +1,11 @@
 import math
 import os
 import pprint
-import google_auth_oauthlib.flow
-import googleapiclient.discovery
-import googleapiclient.errors
 from youtube_transcript_api import YouTubeTranscriptApi
 from multiprocessing.pool import ThreadPool
 import functools
+
+from youtubesearchpython import *
 
 import pygame
 import pygame_gui
@@ -19,7 +18,7 @@ scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
 pp = pprint.PrettyPrinter(indent=4)
 
-t_lang = 'en'
+t_lang = 'fr'
 
 isDebug = True
 
@@ -30,23 +29,13 @@ def get_progress(curr, total):
     return f'{str(curr).zfill(len(str(total)))}/{total}'
 
 
-def get_full_video_list_from_yt(channel_id, youtube, pg_token=None):
-    pg_data = youtube.search().list(
-        part="id, snippet",
-        channelId=channel_id,
-        maxResults=50,
-        pageToken=pg_token
-    ).execute()
+def get_full_video_list_from_yt(channel_id):
 
-    return dict(
-        {
-            item["id"]["videoId"]: item["snippet"]["title"] for
-            item in pg_data["items"] if item["id"]["kind"] == "youtube#video"
-        },
-        **(get_full_video_list_from_yt(channel_id, youtube, pg_data.get("nextPageToken"))
-           if pg_data.get("nextPageToken")
-           else {})
-    )
+    playlist = Playlist(playlist_from_channel_id(channel_id))
+    while playlist.hasMoreVideos:
+        playlist.getNextVideos()
+
+    return dict({item["id"]: item["title"] for item in playlist.videos})
 
 
 def get_transcription_from_yt(video_id):
@@ -66,18 +55,6 @@ def get_transcriptions_from_ytb(videos_data):
                   f' {"" if transcription else "FAILED"} ->'
                   f' {videos_data.get(video_id)}')
             yield data
-
-
-def get_ytb():
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
-    api_service_name = "youtube"
-    api_version = "v3"
-    client_secrets_file = "secrets/code_secret_client_818316336553-0okberju6cmr65vs4qqdtuq5tmgmplsp.apps.googleusercontent.com.json"
-
-    flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(client_secrets_file, scopes)
-    credentials = flow.run_console()
-    return googleapiclient.discovery.build(api_service_name, api_version, credentials=credentials)
 
 
 def getFiles(folder, start='data_'):
@@ -117,7 +94,7 @@ def save_data(data, channel_id, folder):
 
 def get_transcriptions_data_from_ytb(channel_id):
     return save_data({video_id: transcription for video_id, transcription in
-                      get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id, get_ytb()))}, channel_id,
+                      get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id))}, channel_id,
                      'channel_cache')
 
 
@@ -233,7 +210,7 @@ class Background:
         return img
 
     def generate_images(self, folder, rows):
-        arrays = part_array(list(get_data_from_file(self.channel_id, 'channel_cache').keys()), rows)[:-1]
+        arrays = part_array(list(get_transcriptions_data(self.channel_id).keys()), rows)[:-1]
 
         if not os.path.exists(folder):
             os.makedirs(folder)
