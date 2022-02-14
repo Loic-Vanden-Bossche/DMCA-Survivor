@@ -6,6 +6,11 @@ from multiprocessing.pool import ThreadPool
 import functools
 
 from youtubesearchpython import *
+import youtube_dl
+
+import yt_dlp as dlp
+
+from pytimeparse.timeparse import timeparse
 
 import pygame
 import pygame_gui
@@ -25,17 +30,32 @@ isDebug = True
 def debug(*args):
     if isDebug: pp.pprint(*args)
 
+
 def get_progress(curr, total):
     return f'{str(curr).zfill(len(str(total)))}/{total}'
 
 
-def get_full_video_list_from_yt(channel_id):
+def format_channel_infos(infos):
+    return {'name': infos['name'], 'thumb': infos['thumbnails'][-1], 'link': infos['link'], 'id': infos['id']}
 
+def format_video_infos(infos):
+    return infos
+
+def get_full_video_list_from_yt(channel_id):
     playlist = Playlist(playlist_from_channel_id(channel_id))
     while playlist.hasMoreVideos:
         playlist.getNextVideos()
 
-    return dict({item["id"]: item["title"] for item in playlist.videos})
+    return {
+        'channel': format_channel_infos(playlist.info['info']['channel']),
+        'videos': dict({
+            item["id"]: item["title"] for item in
+            sorted([
+                x for x in
+                ThreadPool(len(playlist.videos)).imap_unordered(Video.get, [v["id"] for v in playlist.videos])
+            ], key=lambda x: int(x['viewCount']['text']), reverse=True)[0:100]
+        })
+    }
 
 
 def get_transcription_from_yt(video_id):
@@ -93,15 +113,16 @@ def save_data(data, channel_id, folder):
 
 
 def get_transcriptions_data_from_ytb(channel_id):
-    return save_data({video_id: transcription for video_id, transcription in
-                      get_transcriptions_from_ytb(get_full_video_list_from_yt(channel_id))}, channel_id,
-                     'channel_cache')
+    channel_data, video_list = get_full_video_list_from_yt(channel_id).values()
+    return save_data({'channel': channel_data,
+                      'videos': {video_id: transcription for video_id, transcription in
+                                 get_transcriptions_from_ytb(video_list)}}, channel_id, 'channel_cache')
 
 
 def searchString(query, channel_id):
     return [f'https://youtu.be/{video_id}?t={math.floor(transcription["start"])}' for video_id, transcriptions in
-            get_transcriptions_data(channel_id).items() if transcriptions for transcription in transcriptions if
-            query.lower() in transcription['text'].lower()]
+            get_transcriptions_data(channel_id)['videos'].items() if transcriptions for transcription in transcriptions
+            if query.lower() in transcription['text'].lower()]
 
 
 def flatten(t):
@@ -117,7 +138,8 @@ def get_transcriptions_str(channel_id):
     return functools.reduce(lambda a, b: a + f' {b}',
                             [
                                 i['text'] for i in
-                                flatten([t for t in get_transcriptions_data(channel_id).values() if t is not None])
+                                flatten([t for t in get_transcriptions_data(channel_id)['videos'].values() if
+                                         t is not None])
                             ])
 
 
@@ -146,10 +168,12 @@ def get_people_names(channel_id, lang):
         return get_data_from_file(channel_id, 'names_cache')
     except FileNotFoundError:
 
-        nlp, tag_name, lang = spacy_init(lang)
+        nlp, model, tag_name, lang = spacy_init(lang)
         set_lang(lang)
 
         parted_str = part_str(get_transcriptions_str(channel_id), 100)
+
+        debug(f'No cache found, creating with model {model} ...')
 
         return save_data(get_unique(flatten(
             [
@@ -169,15 +193,22 @@ def spacy_init(lang='en'):
             'en': ('en_core_web_lg', 'PERSON'),
             'fr': ('fr_core_news_lg', 'PER')
         }[lang]
-        debug(f'No cache found, creating with model {model_name} ...')
-        return spacy.load(model_name), tag_name, lang
+
+        try:
+            spacy.cli.info(model_name)
+        except Exception:
+            spacy.cli.download(model_name)
+
+        return spacy.load(model_name), model_name, tag_name, lang
     except KeyError:
         debug('Language not supported, using default')
         return spacy.load('en_core_web_lg'), 'PERSON', 'en'
 
 
+window_dims = (1280, 720)
+
 pygame.init()
-window_surface = pygame.display.set_mode((800, 600))
+window_surface = pygame.display.set_mode(window_dims)
 
 
 def part_array(arr, n):
@@ -210,13 +241,13 @@ class Background:
         return img
 
     def generate_images(self, folder, rows):
-        arrays = part_array(list(get_transcriptions_data(self.channel_id).keys()), rows)[:-1]
+        arrays = part_array(list(get_transcriptions_data(self.channel_id)['videos'].keys()), rows)[:-1]
 
         if not os.path.exists(folder):
             os.makedirs(folder)
 
         return [
-            print_progress(index, len(arrays), ('montage', 'processed') , img) for index, img in
+            print_progress(index, len(arrays), ('montage', 'processed'), img) for index, img in
             enumerate(ThreadPool(len(arrays)).imap_unordered(functools.partial(self.make_montage, folder),
                                                              [(i, arr) for i, arr in enumerate(arrays)]))
         ]
@@ -297,23 +328,92 @@ class Carrousel:
         self.y_pos = y_pos
 
 
+def get_musics(channel_id):
+    channel, _ = get_transcriptions_data(channel_id).values()
+
+    if not os.path.exists('musics_cache'):
+        os.makedirs('musics_cache')
+
+    if os.path.exists(f'musics_cache/{channel_id}.mp3'):
+        return
+
+    videos = eval(SearchVideos(f'{channel["name"]} Musique').result())['search_result']
+    res = []
+    i = 0
+    while len(res) == 0:
+        i += 1
+        res = [
+            video for video in videos
+            if timeparse(video['duration']) <= 300 + (100 * i)
+        ]
+
+    completed = False
+
+    i = 0
+
+    def my_hook(d):
+        print(d['status'])
+        if d['status'] == 'finished':
+            print('Done downloading, now converting ...')
+
+    while not completed:
+        try:
+            video_url = res[i]['link']
+            print(video_url)
+            video_info = dlp.YoutubeDL().extract_info(
+                url=video_url, download=False
+            )
+            filename = f"musics_cache/{channel_id}.webm"
+            options = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'keepvideo': False,
+                'progress_hooks': [my_hook],
+                'outtmpl': filename,
+            }
+
+            i += 1
+
+            with dlp.YoutubeDL(options) as ydl:
+                ydl.download([video_info['webpage_url']])
+
+            completed = True
+            print("Download complete... {}".format(filename))
+        except youtube_dl.utils.DownloadError:
+            debug('retrying ...')
+
+
 def main():
     # Palamashow : UCoZoRz4-y6r87ptDp4Jk74g
     # Les kassos : UCv88958LRDfndKV_Y7XmAnA
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
 
-    back = Background('UCv88958LRDfndKV_Y7XmAnA', 8)
+    channel_id = 'UCYGjxo5ifuhnmvhPvCc3DJQ'
+
+    get_people_names('UCYGjxo5ifuhnmvhPvCc3DJQ', 'fr')
+
+    get_musics(channel_id)
+
+    back = Background(channel_id, 8)
 
     pygame.display.set_caption('Game')
 
-    background = pygame.Surface((800, 600))
+    background = pygame.Surface(window_dims)
     background.fill(pygame.Color('#000000'))
 
     foreground = background.copy()
     foreground.set_alpha(128)
 
     is_running = True
+
+    pygame.mixer.music.load(f'musics_cache/{channel_id}.mp3')
+    pygame.mixer.music.play()
+    pygame.mixer.music.set_volume(0.6)
 
     while is_running:
 
@@ -325,9 +425,6 @@ def main():
         back.display()
         window_surface.blit(foreground, (0, 0))
         pygame.display.update()
-
-    '''for name in get_people_names('UCoZoRz4-y6r87ptDp4Jk74g', 'fr'):
-        print(name)'''
 
 
 if __name__ == "__main__":
