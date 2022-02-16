@@ -1,8 +1,11 @@
 import math
 import os
 import pprint
+
+from pygame_gui.core import ObjectID
 from youtube_transcript_api import YouTubeTranscriptApi
 from multiprocessing.pool import ThreadPool
+import threading
 import functools
 
 from youtubesearchpython import *
@@ -27,8 +30,15 @@ t_lang = 'fr'
 
 isDebug = True
 
+progress_status = {
+    'status': '',
+    'title': '',
+    'progress': 0,
+}
+
+
 def debug(*args):
-    if isDebug: pp.pprint(*args)
+    if isDebug: print(*args)
 
 
 def get_progress(curr, total):
@@ -38,21 +48,30 @@ def get_progress(curr, total):
 def format_channel_infos(infos):
     return {'name': infos['name'], 'thumb': infos['thumbnails'][-1], 'link': infos['link'], 'id': infos['id']}
 
+
 def format_video_infos(infos):
     return infos
+
 
 def get_full_video_list_from_yt(channel_id):
     playlist = Playlist(playlist_from_channel_id(channel_id))
     while playlist.hasMoreVideos:
         playlist.getNextVideos()
 
+    reset_progress('videos')
+
     return {
         'channel': format_channel_infos(playlist.info['info']['channel']),
         'videos': dict({
             item["id"]: item["title"] for item in
             sorted([
-                x for x in
-                ThreadPool(len(playlist.videos)).imap_unordered(Video.get, [v["id"] for v in playlist.videos])
+                set_progress_status(
+                    f'{get_progress(i, len(playlist.videos))} - {x["title"]}',
+                    calculate_progress(i, len(playlist.videos)),
+                    x)
+                for i, x in
+                enumerate(
+                    ThreadPool(len(playlist.videos)).imap_unordered(Video.get, [v["id"] for v in playlist.videos]))
             ], key=lambda x: int(x['viewCount']['text']), reverse=True)[0:100]
         })
     }
@@ -65,16 +84,30 @@ def get_transcription_from_yt(video_id):
         return video_id, None
 
 
+def reset_progress(title):
+    global progress_status
+    progress_status.update(title=title, status='', progress=0)
+
+
+def calculate_progress(n, total):
+    return n / total
+
+
+def set_progress_status(status, progress, data=None):
+    global progress_status
+    progress_status.update(status=status, progress=progress)
+    debug(f'{progress_status.get("title")} -> {progress * 100}% -> {status}')
+    return data
+
+
 def get_transcriptions_from_ytb(videos_data):
     i = 0
+    reset_progress('resolving translations')
     with ThreadPool(len(videos_data)) as pool:
         for data in pool.imap_unordered(get_transcription_from_yt, videos_data.keys()):
             i += 1
-            video_id, transcription = data
-            debug(f'{get_progress(i, len(videos_data))} ->'
-                  f' {"" if transcription else "FAILED"} ->'
-                  f' {videos_data.get(video_id)}')
-            yield data
+            video_id, _ = data
+            yield set_progress_status(videos_data.get(video_id), calculate_progress(i, len(videos_data)), data)
 
 
 def getFiles(folder, start='data_'):
@@ -156,7 +189,7 @@ def get_parted_names(nlp, tag_name, parted_str):
     return [ent.text.strip() for ent in nlp(parted_str).ents if ent.label_ == tag_name]
 
 
-def print_progress(i, n, text, data):
+def print_progress(i, n, text, data=None):
     prefix, suffix = text
     i += 1
     debug(f'{prefix} -> {get_progress(i, n)} -> {suffix}')
@@ -174,10 +207,14 @@ def get_people_names(channel_id, lang):
         parted_str = part_str(get_transcriptions_str(channel_id), 100)
 
         debug(f'No cache found, creating with model {model} ...')
-
+        reset_progress('resolving names')
         return save_data(get_unique(flatten(
             [
-                print_progress(i, len(parted_str), ('people resolver', 'chunk processed'), data) for
+                set_progress_status(
+                    get_progress(i, len(parted_str) - 1),
+                    calculate_progress(i, len(parted_str) - 1),
+                    data
+                ) for
                 i, data in
                 enumerate(ThreadPool(len(parted_str)).imap_unordered(
                     functools.partial(get_parted_names, nlp, tag_name), parted_str)
@@ -218,11 +255,14 @@ def part_array(arr, n):
 
 class Background:
 
-    def display(self):
-        for carrousel in self.carrousels:
+    def update(self):
+        window_surface.blit(self._background, (0, 0))
+        for carrousel in self._carrousels:
             carrousel.display()
 
-    def get_image_files(self, folder, rows):
+        window_surface.blit(self._foreground, (0, 0))
+
+    def _get_image_files(self, folder, rows):
         files = getFiles(folder, 'img_carrousel_')
         for idx in range(0, rows - 1):
             if f'img_carrousel_{idx}.png' not in files:
@@ -230,7 +270,7 @@ class Background:
 
         return files
 
-    def make_montage(self, folder, data):
+    def _make_montage(self, folder, data):
         index, arr = data
         img = f'{folder}/img_carrousel_{index}.png'
         skimage.io.imsave(img, skimage.util.montage([
@@ -240,26 +280,29 @@ class Background:
         ], channel_axis=3, grid_shape=(1, len(arr))))
         return img
 
-    def generate_images(self, folder, rows):
-        arrays = part_array(list(get_transcriptions_data(self.channel_id)['videos'].keys()), rows)[:-1]
+    def _generate_images(self, folder, rows):
+        arrays = part_array(list(get_transcriptions_data(self._channel_id)['videos'].keys()), rows)[:-1]
 
         if not os.path.exists(folder):
             os.makedirs(folder)
 
+        reset_progress('montage')
+
         return [
-            print_progress(index, len(arrays), ('montage', 'processed'), img) for index, img in
-            enumerate(ThreadPool(len(arrays)).imap_unordered(functools.partial(self.make_montage, folder),
+            set_progress_status(f'{get_progress(index + 1, len(arrays))} processed',
+                                calculate_progress(index + 1, len(arrays)), img) for index, img in
+            enumerate(ThreadPool(len(arrays)).imap_unordered(functools.partial(self._make_montage, folder),
                                                              [(i, arr) for i, arr in enumerate(arrays)]))
         ]
 
-    def generate_carrousels(self):
-        carrousel_height = window_surface.get_height() / self.row_count
-        folder = f'background_cache/{self.channel_id}'
+    def _generate_carrousels(self):
+        carrousel_height = window_surface.get_height() / self._row_count
+        folder = f'background_cache/{self._channel_id}'
 
         try:
-            res = [f'{folder}/{file}' for file in self.get_image_files(folder, self.row_count)]
+            res = [f'{folder}/{file}' for file in self._get_image_files(folder, self._row_count)]
         except FileNotFoundError:
-            res = self.generate_images(folder, self.row_count)
+            res = self._generate_images(folder, self._row_count)
 
         return [
             Carrousel(path,
@@ -271,72 +314,67 @@ class Background:
         ]
 
     def __init__(self, channel_id, row_count):
-        self.channel_id = channel_id
-        self.row_count = row_count
-        self.carrousels = self.generate_carrousels()
+        self._channel_id = channel_id
+        self._row_count = row_count
+        self._background = pygame.Surface(window_dims)
+        self._background.fill(pygame.Color('#000000'))
+        self._foreground = self._background.copy()
+        self._foreground.set_alpha(128)
+        self._carrousels = self._generate_carrousels()
 
 
 class Carrousel:
 
-    def get_right(self):
-        if self.direction == 'right':
-            return -self.image.get_width()
-        elif self.direction == 'left':
+    def _get_right(self):
+        if self._direction == 'right':
+            return -self._image.get_width()
+        elif self._direction == 'left':
             return 0
 
-    def get_left(self):
-        if self.direction == 'right':
+    def _get_left(self):
+        if self._direction == 'right':
             return 0
-        elif self.direction == 'left':
-            return self.image.get_width()
+        elif self._direction == 'left':
+            return self._image.get_width()
 
-    def move(self):
-        if self.direction == 'right':
-            self.left += self.speed
-            self.right += self.speed
-        elif self.direction == 'left':
-            self.left -= self.speed
-            self.right -= self.speed
+    def _move(self):
+        if self._direction == 'right':
+            self._left += self._speed
+            self._right += self._speed
+        elif self._direction == 'left':
+            self._left -= self._speed
+            self._right -= self._speed
 
     def display(self):
 
-        self.move()
+        self._move()
 
-        if self.direction == 'right':
-            if round(self.right) == 0:
-                self.right = self.get_right()
+        if self._direction == 'right':
+            if round(self._right) == 0:
+                self._right = self._get_right()
 
-            if round(self.left) == self.image.get_width():
-                self.left = self.get_left()
+            if round(self._left) == self._image.get_width():
+                self._left = self._get_left()
         elif 'left':
-            if round(self.right) == -self.image.get_width():
-                self.right = self.get_right()
+            if round(self._right) == -self._image.get_width():
+                self._right = self._get_right()
 
-            if round(self.left) == 0:
-                self.left = self.get_left()
+            if round(self._left) == 0:
+                self._left = self._get_left()
 
-        window_surface.blit(self.image, (self.left, self.y_pos))
-        window_surface.blit(self.image, (self.right, self.y_pos))
+        window_surface.blit(self._image, (self._left, self._y_pos))
+        window_surface.blit(self._image, (self._right, self._y_pos))
 
     def __init__(self, montage_path, height, speed, y_pos=0, direction='right'):
         img = pygame.image.load(montage_path)
-        self.image = pygame.transform.smoothscale(img, (height * (img.get_width() / img.get_height()), height))
-        self.speed = speed
-        self.direction = direction
-        self.left = self.get_left()
-        self.right = self.get_right()
-        self.y_pos = y_pos
+        self._image = pygame.transform.smoothscale(img, (height * (img.get_width() / img.get_height()), height))
+        self._speed = speed
+        self._direction = direction
+        self._left = self._get_left()
+        self._right = self._get_right()
+        self._y_pos = y_pos
 
-
-def get_musics(channel_id):
-    channel, _ = get_transcriptions_data(channel_id).values()
-
-    if not os.path.exists('musics_cache'):
-        os.makedirs('musics_cache')
-
-    if os.path.exists(f'musics_cache/{channel_id}.mp3'):
-        return
-
+def download_music_from_channel(channel_id ,channel):
     videos = eval(SearchVideos(f'{channel["name"]} Musique').result())['search_result']
     res = []
     i = 0
@@ -352,9 +390,14 @@ def get_musics(channel_id):
     i = 0
 
     def my_hook(d):
-        print(d['status'])
-        if d['status'] == 'finished':
-            print('Done downloading, now converting ...')
+        if d['status'] == 'downloading':
+            set_progress_status(
+                f'{d["_percent_str"]} - {d["_speed_str"]}', calculate_progress(d["downloaded_bytes"], d["total_bytes"]))
+
+            print(d["downloaded_bytes"], d["total_bytes"])
+
+        elif d['status'] == 'finished':
+            set_progress_status('Done downloading, now converting ...', calculate_progress(100, 100))
 
     while not completed:
         try:
@@ -378,6 +421,8 @@ def get_musics(channel_id):
 
             i += 1
 
+            reset_progress('downloading music')
+
             with dlp.YoutubeDL(options) as ydl:
                 ydl.download([video_info['webpage_url']])
 
@@ -385,6 +430,96 @@ def get_musics(channel_id):
             print("Download complete... {}".format(filename))
         except youtube_dl.utils.DownloadError:
             debug('retrying ...')
+
+def get_musics(channel_id):
+    channel, _ = get_transcriptions_data(channel_id).values()
+
+    if not os.path.exists('musics_cache'):
+        os.makedirs('musics_cache')
+
+    if not os.path.exists(f'musics_cache/{channel_id}.mp3'):
+        download_music_from_channel(channel_id, channel)
+
+    pygame.mixer.music.load(f'musics_cache/{channel_id}.mp3')
+    pygame.mixer.music.play()
+    pygame.mixer.music.set_volume(0.6)
+
+
+def get_centered_rect(w, h, y_offset=0):
+    return pygame.Rect(
+        ((window_surface.get_width() / 2) - w / 2, ((window_surface.get_height() / 2) - h / 2) + y_offset), (w, h))
+
+
+class ProgressScreen:
+
+    @property
+    def progress(self):
+        return self._progress_bar.percent_full
+
+    @progress.setter
+    def progress(self, progress):
+        self._progress_bar.percent_full = progress
+
+    @property
+    def status(self):
+        return self._status_label.text
+
+    @status.setter
+    def status(self, status):
+        self._status_label.set_text(status)
+
+    @property
+    def title(self):
+        return self._status_label.text
+
+    @title.setter
+    def title(self, status):
+        self._title_label.set_text(status)
+
+    def update(self, time_delta):
+        if not self.display: return
+
+        window_surface.blit(self._background, (0, 0))
+        self._manager.update(time_delta)
+        self._set_status_from_global()
+        self._manager.draw_ui(window_surface)
+
+    def _set_status_from_global(self):
+        global progress_status
+        status, title, progress = progress_status.values()
+
+        self.title = title
+        self.status = status
+        self.progress = progress
+
+    def __init__(self, status='', title=''):
+        self.display = True
+        self._manager = pygame_gui.UIManager(window_dims, 'loading.json')
+        self._background = pygame.Surface(window_dims)
+        self._background.fill(self._manager.ui_theme.get_colour('dark_bg'))
+
+        height = 30
+
+        self._progress_bar = pygame_gui.elements.UIStatusBar(get_centered_rect(200, height, 100),
+                                                             self._manager,
+                                                             None,
+                                                             object_id=ObjectID('#progress_bar'))
+
+        self._status_label = pygame_gui.elements.UILabel(get_centered_rect(window_surface.get_width(), height, 100 + height),
+                                                         status,
+                                                         self._manager,
+                                                         object_id=ObjectID('#progress_bar_label'))
+
+        self._title_label = pygame_gui.elements.UILabel(get_centered_rect(window_surface.get_width(), height, 100 - height),
+                                                        title,
+                                                        self._manager,
+                                                        object_id=ObjectID('#progress_bar_label'))
+
+
+def load_parameters_for_channel(channel_id):
+    get_people_names(channel_id, 'fr')
+    Background(channel_id, 8)
+    get_musics(channel_id)
 
 
 def main():
@@ -395,35 +530,28 @@ def main():
 
     channel_id = 'UCYGjxo5ifuhnmvhPvCc3DJQ'
 
-    get_people_names('UCYGjxo5ifuhnmvhPvCc3DJQ', 'fr')
-
-    get_musics(channel_id)
-
-    back = Background(channel_id, 8)
+    threading.Thread(target=load_parameters_for_channel, args=[channel_id]).start()
 
     pygame.display.set_caption('Game')
 
-    background = pygame.Surface(window_dims)
-    background.fill(pygame.Color('#000000'))
+    # back = Background(channel_id, 8)
 
-    foreground = background.copy()
-    foreground.set_alpha(128)
+    loading_screen = ProgressScreen()
+    loading_screen.display = True
 
     is_running = True
 
-    pygame.mixer.music.load(f'musics_cache/{channel_id}.mp3')
-    pygame.mixer.music.play()
-    pygame.mixer.music.set_volume(0.6)
+    clock = pygame.time.Clock()
 
     while is_running:
-
+        time_delta = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 is_running = False
 
-        window_surface.blit(background, (0, 0))
-        back.display()
-        window_surface.blit(foreground, (0, 0))
+        # back.update()
+        loading_screen.update(time_delta)
+
         pygame.display.update()
 
 

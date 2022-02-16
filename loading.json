@@ -1,0 +1,13 @@
+{
+  "#progress_bar": {
+    "colours": {
+      "filled_bar": "#fcba03",
+      "unfilled_bar": "#606060"
+    },
+    "misc": {
+      "shadow_width": "5",
+      "shape": "rounded_rectangle",
+      "shape_corner_radius": "3"
+    }
+  }
+}
