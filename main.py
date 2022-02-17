@@ -1,8 +1,5 @@
 import math
-import multiprocessing
 import os
-import pprint
-import sys
 
 from pygame_gui.core import ObjectID
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -26,10 +23,6 @@ import requests
 import random
 import spacy
 
-scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
-
-pp = pprint.PrettyPrinter(indent=4)
-
 t_lang = 'fr'
 
 isDebug = True
@@ -40,7 +33,6 @@ progress_status = {
     'progress': 0,
     'thumb': False,
 }
-
 
 def debug(*args):
     if isDebug: print(*args)
