@@ -96,7 +96,7 @@ def calculate_progress(n, total):
 def set_progress_status(status, progress, data=None):
     global progress_status
     progress_status.update(status=status, progress=progress)
-    debug(f'{progress_status.get("title")} -> {progress * 100}% -> {status}')
+    debug(f'{progress_status.get("title")} -> {round(progress * 100, 1)}% -> {status}')
     return data
 
 
@@ -114,32 +114,31 @@ def getFiles(folder, start='data_'):
     return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith(start)]
 
 
-def get_data_from_file(channel_id, folder):
-    file = next((x for x in getFiles(folder) if x == 'data_' + channel_id), None)
-
-    if file:
-        try:
-            with open(f'{folder}/{file}', 'r', encoding='utf-8') as f:
-                return eval(f.read())
-        except SyntaxError:
-            debug('Invalid data ... deleting')
-            os.remove(f'{folder}/{file}')
+def get_data_from_file(file_name, folder):
+    folder =  'cache/' + folder
+    try:
+        with open(f'{folder}/{file_name}', 'r', encoding='utf-8') as f:
+            return eval(f.read())
+    except SyntaxError:
+        debug('Invalid data ... deleting')
+        os.remove(f'{folder}/{file_name}')
 
     raise FileNotFoundError('File not found or invalid data')
 
 
 def get_transcriptions_data(channel_id):
     try:
-        return get_data_from_file(channel_id, 'channel_cache')
+        return get_data_from_file('channel_data', channel_id)
     except FileNotFoundError:
         return get_transcriptions_data_from_ytb(channel_id)
 
 
-def save_data(data, channel_id, folder):
+def save_data(data, file_name, folder):
+    folder = 'cache/' + folder
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    with open(f'{folder}/data_{channel_id}', 'w', encoding='utf-8') as f:
+    with open(f'{folder}/{file_name}', 'w', encoding='utf-8') as f:
         f.write(str(data))
 
     return data
@@ -149,7 +148,7 @@ def get_transcriptions_data_from_ytb(channel_id):
     channel_data, video_list = get_full_video_list_from_yt(channel_id).values()
     return save_data({'channel': channel_data,
                       'videos': {video_id: transcription for video_id, transcription in
-                                 get_transcriptions_from_ytb(video_list)}}, channel_id, 'channel_cache')
+                                 get_transcriptions_from_ytb(video_list)}}, 'channel_data', channel_id)
 
 
 def searchString(query, channel_id):
@@ -198,7 +197,7 @@ def print_progress(i, n, text, data=None):
 
 def get_people_names(channel_id, lang):
     try:
-        return get_data_from_file(channel_id, 'names_cache')
+        return get_data_from_file('names_data', channel_id)
     except FileNotFoundError:
 
         nlp, model, tag_name, lang = spacy_init(lang)
@@ -220,7 +219,7 @@ def get_people_names(channel_id, lang):
                     functools.partial(get_parted_names, nlp, tag_name), parted_str)
                 )
             ]
-        )), channel_id, 'names_cache')
+        )), 'names_data', channel_id)
 
 
 def spacy_init(lang='en'):
@@ -297,7 +296,7 @@ class Background:
 
     def _generate_carrousels(self):
         carrousel_height = window_surface.get_height() / self._row_count
-        folder = f'background_cache/{self._channel_id}'
+        folder = f'cache/{self._channel_id}/background_cache'
 
         try:
             res = [f'{folder}/{file}' for file in self._get_image_files(folder, self._row_count)]
@@ -374,7 +373,8 @@ class Carrousel:
         self._right = self._get_right()
         self._y_pos = y_pos
 
-def download_music_from_channel(channel_id ,channel):
+
+def download_music_from_channel(channel_id, channel):
     videos = eval(SearchVideos(f'{channel["name"]} Musique').result())['search_result']
     res = []
     i = 0
@@ -394,8 +394,6 @@ def download_music_from_channel(channel_id ,channel):
             set_progress_status(
                 f'{d["_percent_str"]} - {d["_speed_str"]}', calculate_progress(d["downloaded_bytes"], d["total_bytes"]))
 
-            print(d["downloaded_bytes"], d["total_bytes"])
-
         elif d['status'] == 'finished':
             set_progress_status('Done downloading, now converting ...', calculate_progress(100, 100))
 
@@ -406,7 +404,7 @@ def download_music_from_channel(channel_id ,channel):
             video_info = dlp.YoutubeDL().extract_info(
                 url=video_url, download=False
             )
-            filename = f"musics_cache/{channel_id}.webm"
+            filename = f"cache/{channel_id}/music.webm"
             options = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -431,16 +429,18 @@ def download_music_from_channel(channel_id ,channel):
         except youtube_dl.utils.DownloadError:
             debug('retrying ...')
 
+
 def get_musics(channel_id):
     channel, _ = get_transcriptions_data(channel_id).values()
+    folder = f'cache/{channel_id}'
 
-    if not os.path.exists('musics_cache'):
-        os.makedirs('musics_cache')
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
-    if not os.path.exists(f'musics_cache/{channel_id}.mp3'):
+    if not os.path.exists(f'{folder}/music.mp3'):
         download_music_from_channel(channel_id, channel)
 
-    pygame.mixer.music.load(f'musics_cache/{channel_id}.mp3')
+    pygame.mixer.music.load(f'{folder}/music.mp3')
     pygame.mixer.music.play()
     pygame.mixer.music.set_volume(0.6)
 
@@ -505,15 +505,17 @@ class ProgressScreen:
                                                              None,
                                                              object_id=ObjectID('#progress_bar'))
 
-        self._status_label = pygame_gui.elements.UILabel(get_centered_rect(window_surface.get_width(), height, 100 + height),
-                                                         status,
-                                                         self._manager,
-                                                         object_id=ObjectID('#progress_bar_label'))
+        self._status_label = pygame_gui.elements.UILabel(
+            get_centered_rect(window_surface.get_width(), height, 100 + height),
+            status,
+            self._manager,
+            object_id=ObjectID('#progress_bar_label'))
 
-        self._title_label = pygame_gui.elements.UILabel(get_centered_rect(window_surface.get_width(), height, 100 - height),
-                                                        title,
-                                                        self._manager,
-                                                        object_id=ObjectID('#progress_bar_label'))
+        self._title_label = pygame_gui.elements.UILabel(
+            get_centered_rect(window_surface.get_width(), height, 100 - height),
+            title,
+            self._manager,
+            object_id=ObjectID('#progress_bar_label'))
 
 
 def load_parameters_for_channel(channel_id):
@@ -528,7 +530,7 @@ def main():
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
 
-    channel_id = 'UCYGjxo5ifuhnmvhPvCc3DJQ'
+    channel_id = 'UCoZoRz4-y6r87ptDp4Jk74g'
 
     threading.Thread(target=load_parameters_for_channel, args=[channel_id]).start()
 
