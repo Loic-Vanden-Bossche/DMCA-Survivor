@@ -3,7 +3,6 @@ pygame_gui==0.6.4
 pytimeparse==1.1.8
 requests==2.26.0
 scikit_image==0.19.1
-skimage==0.0
 spacy==3.2.1
 youtube_dl==2021.12.17
 youtube_search_python==1.6.2
