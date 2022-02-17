@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 
 from pygame_gui.core import ObjectID
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -22,6 +23,8 @@ import requests
 
 import random
 import spacy
+
+from src import utils
 
 t_lang = 'fr'
 
@@ -255,12 +258,6 @@ def spacy_init(lang='en'):
         return spacy.load('en_core_web_lg'), 'PERSON', 'en'
 
 
-window_dims = (1280, 720)
-
-pygame.init()
-window_surface = pygame.display.set_mode(window_dims)
-
-
 def part_array(arr, n):
     chunk_len = len(arr) // n
     return [arr[idx: idx + chunk_len] for idx in range(0, len(arr), chunk_len)]
@@ -269,11 +266,11 @@ def part_array(arr, n):
 class Background:
 
     def update(self, time_delta):
-        window_surface.blit(self._background, (0, 0))
+        self._window_surface.blit(self._background, (0, 0))
         for carrousel in self._carrousels:
             carrousel.update(time_delta)
 
-        window_surface.blit(self._foreground, (0, 0))
+        self._window_surface.blit(self._foreground, (0, 0))
 
     def _get_image_files(self, folder, rows):
         files = getFiles(folder, 'img_carrousel_')
@@ -309,7 +306,7 @@ class Background:
         ]
 
     def _generate_carrousels(self):
-        carrousel_height = window_surface.get_height() / self._row_count
+        carrousel_height = self._window_surface.get_height() / self._row_count
         folder = f'cache/{self._channel_id}/background_cache'
 
         try:
@@ -327,9 +324,10 @@ class Background:
         ]
 
     def __init__(self, channel_id, row_count):
+        self._window_surface = pygame.display.get_surface()
         self._channel_id = channel_id
         self._row_count = row_count
-        self._background = pygame.Surface(window_dims)
+        self._background = pygame.Surface(utils.get_dims_from_surface(self._window_surface))
         self._background.fill(pygame.Color('#000000'))
         self._foreground = self._background.copy()
         self._foreground.set_alpha(128)
@@ -377,11 +375,12 @@ class Carrousel:
             if round(self._left) == 0:
                 self._left = self._get_left()
 
-        window_surface.blit(self._image, (self._left, self._y_pos))
-        window_surface.blit(self._image, (self._right, self._y_pos))
+        self._window_surface.blit(self._image, (self._left, self._y_pos))
+        self._window_surface.blit(self._image, (self._right, self._y_pos))
 
     def __init__(self, montage_path, height, speed, y_pos=0, direction='right'):
         img = pygame.image.load(montage_path)
+        self._window_surface = pygame.display.get_surface()
         self._image = pygame.transform.smoothscale(img, (height * (img.get_width() / img.get_height()), height))
         self._speed = speed
         self._direction = direction
@@ -456,19 +455,6 @@ def get_musics(channel_id):
     if not os.path.exists(f'{folder}/music.mp3'):
         download_music_from_channel(channel_id, channel)
 
-    pygame.mixer.music.load(f'{folder}/music.mp3')
-    pygame.mixer.music.play()
-    pygame.mixer.music.set_volume(0.6)
-
-
-def get_centered_rect(w, h, y_offset=0):
-    return pygame.Rect(
-        ((window_surface.get_width() / 2) - w / 2, ((window_surface.get_height() / 2) - h / 2) + y_offset), (w, h))
-
-
-def get_centered_pos_from_wh(w, h, y_offset=0):
-    return (window_surface.get_width() / 2) - w / 2, ((window_surface.get_height() / 2) - h / 2) + y_offset
-
 
 class ProgressScreen:
 
@@ -499,10 +485,10 @@ class ProgressScreen:
     def update(self, time_delta):
         if not self.display: return
 
-        window_surface.blit(self._background, (0, 0))
+        self._window_surface.blit(self._background, (0, 0))
 
         if self._thumb:
-            window_surface.blit(self._thumb, get_centered_pos_from_wh(
+            self._window_surface.blit(self._thumb, utils.get_centered_pos_from_wh(
                 self._thumb.get_width(),
                 self._thumb.get_height(),
                 -100
@@ -510,7 +496,7 @@ class ProgressScreen:
 
         self._manager.update(time_delta)
         self._set_status_from_global()
-        self._manager.draw_ui(window_surface)
+        self._manager.draw_ui(self._window_surface)
 
     def _set_status_from_global(self):
         global progress_status
@@ -527,8 +513,9 @@ class ProgressScreen:
 
     def __init__(self, channel_id, status='', title=''):
         self.display = True
-        self._manager = pygame_gui.UIManager(window_dims, 'loading.json')
-        self._background = pygame.Surface(window_dims)
+        self._window_surface = pygame.display.get_surface()
+        self._manager = pygame_gui.UIManager(utils.get_dims_from_surface(self._window_surface), 'themes/loading.json')
+        self._background = pygame.Surface(utils.get_dims_from_surface(self._window_surface))
         self._background.fill(self._manager.ui_theme.get_colour('dark_bg'))
 
         self._thumb = None
@@ -536,19 +523,19 @@ class ProgressScreen:
 
         height = 30
 
-        self._progress_bar = pygame_gui.elements.UIStatusBar(get_centered_rect(200, height, 100),
+        self._progress_bar = pygame_gui.elements.UIStatusBar(utils.get_centered_rect(200, height, 100),
                                                              self._manager,
                                                              None,
                                                              object_id=ObjectID('#progress_bar'))
 
         self._status_label = pygame_gui.elements.UILabel(
-            get_centered_rect(window_surface.get_width(), height, 100 + height),
+            utils.get_centered_rect(self._window_surface.get_width(), height, 100 + height),
             status,
             self._manager,
             object_id=ObjectID('#progress_bar_label'))
 
         self._title_label = pygame_gui.elements.UILabel(
-            get_centered_rect(window_surface.get_width(), height, 100 - height),
+            utils.get_centered_rect(self._window_surface.get_width(), height, 100 - height),
             title,
             self._manager,
             object_id=ObjectID('#progress_bar_label'))
@@ -583,17 +570,26 @@ def loading_loop(channel_id):
         time_delta = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                is_loading = False
+                pygame.quit()
+                sys.exit()
 
         loading_screen.update(time_delta)
 
         pygame.display.update()
 
 
+def load_music(channel_id):
+    pygame.mixer.music.load(f'cache/{channel_id}/music.mp3')
+    pygame.mixer.music.play()
+    pygame.mixer.music.set_volume(0.3)
+
+
 def channel_menu_loop(data):
     is_display_menu = True
 
     pygame.display.set_caption('Channel menu')
+
+    load_music(data)
 
     menu_back = Background(data, 8)
 
@@ -603,25 +599,9 @@ def channel_menu_loop(data):
         time_delta = clock.tick(120) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                is_display_menu = False
+                pygame.quit()
+                sys.exit()
 
         menu_back.update(time_delta)
 
         pygame.display.update()
-
-
-def main():
-    # Palamashow : UCoZoRz4-y6r87ptDp4Jk74g
-    # Les kassos : UCv88958LRDfndKV_Y7XmAnA
-    # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
-    # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
-
-    channel_id = 'UCYGjxo5ifuhnmvhPvCc3DJQ'
-
-    loading_loop(channel_id)
-
-    channel_menu_loop(channel_id)
-
-
-if __name__ == "__main__":
-    main()
