@@ -6,14 +6,13 @@ class Player(pygame.sprite.Sprite):
         super().__init__(groups)
         self.image = pygame.image.load('../graphics/placeholder/character.jpg').convert_alpha()
         self.rect = self.image.get_rect(center=pos)
+        self.life = 3
 
-    def input(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    print("shoot")
+    def take_damage(self):
+        self.life -= 1
+        print(self.life)
 
     def update(self):
-        self.input()
+        if self.life == 0:
+            print('Game Over')
+            self.kill()
