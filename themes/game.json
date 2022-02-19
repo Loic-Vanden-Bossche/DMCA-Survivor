@@ -1,0 +1,20 @@
+{
+  "#health_bar": {
+    "colours": {
+      "filled_bar": "#AA4040D0",
+      "unfilled_bar": "#888888D0"
+    },
+    "misc": {
+      "follow_sprite_offset": "0,-10"
+    }
+  },
+  "#timer_bar": {
+    "colours": {
+      "filled_bar": "#77CC77D0",
+      "unfilled_bar": "#888888D0"
+    },
+    "misc": {
+      "follow_sprite_offset": "0,-5"
+    }
+  }
+}

@@ -22,15 +22,16 @@ class Game:
         # loader.channel_menu_loop(channel_id)
 
         while True:
+            time_delta = self.clock.tick(60)/1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
                 self.level.input(event)
 
             self.screen.fill('black')
-            self.level.run()
+            self.level.run(time_delta)
             pygame.display.update()
-            self.clock.tick(60)
 
 
 def main():
