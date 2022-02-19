@@ -4,7 +4,7 @@ import os
 import sys
 import threading
 from multiprocessing.pool import ThreadPool
-from uuid import uuid4
+from uuid import uuid5, UUID
 
 import pygame
 import pygame_gui
@@ -180,7 +180,7 @@ def get_transcriptions_str(channel_id):
 
 
 def get_unique(arr):
-    return [{'id': str(uuid4()), 'name': name} for name in list(dict.fromkeys(arr))]
+    return [{'id': str(uuid5(UUID('6bccb050-91b0-11ec-b13f-cb90244a3835'), name)), 'name': name} for name in list(dict.fromkeys(arr))]
 
 
 def set_lang(lang):
