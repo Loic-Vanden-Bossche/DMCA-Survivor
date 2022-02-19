@@ -1,3 +1,5 @@
+import os
+
 import pygame
 
 def get_centered_rect(w, h, y_offset=0):
@@ -17,3 +19,7 @@ def get_dims_from_surface(surface: pygame.Surface):
 
 def get_dims_from_display():
     return pygame.display.get_surface().get_width(), pygame.display.get_surface().get_height()
+
+
+def getFiles(folder, start='data_'):
+    return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith(start)]

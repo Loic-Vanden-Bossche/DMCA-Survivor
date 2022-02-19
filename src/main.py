@@ -1,5 +1,7 @@
 import pygame
-import loader
+
+from src.channel_menu import channel_menu_loop
+from src.loader import loading_loop
 
 class Game:
     def __init__(self):
@@ -12,8 +14,8 @@ class Game:
     def run(self):
         channel_id = 'UC_yP2DpIgs5Y1uWC0T03Chw'
 
-        loader.loading_loop(channel_id)
-        loader.channel_menu_loop(channel_id)
+        loading_loop(channel_id)
+        channel_menu_loop(channel_id)
 
 
 def main():
