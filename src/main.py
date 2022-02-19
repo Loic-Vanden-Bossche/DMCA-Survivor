@@ -1,23 +1,35 @@
+import sys
+
 import pygame
 import loader
+from settings import *
+from level import Level
+
 
 class Game:
     def __init__(self):
         # general setup
         pygame.init()
-        self.screen = pygame.display.set_mode(1280, 720)
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('Zelda')
         self.clock = pygame.time.Clock()
 
-    def run(self):
-        channel_id = 'UCQVaKQcp4OxSg1eC6SF3NTw'
+        self.level = Level()
 
-        loader.loading_loop(channel_id)
-        loader.channel_menu_loop(channel_id)
+    def run(self):
+        # channel_id = 'UCQVaKQcp4OxSg1eC6SF3NTw'
+        # loader.loading_loop(channel_id)
+        # loader.channel_menu_loop(channel_id)
+
+        while True:
+            self.screen.fill('black')
+            self.level.run()
+            pygame.display.update()
+            self.clock.tick(FPS)
 
 
 def main():
-    # Palamashow : UCoZoRz4-y6r87ptDp4Jk74g
+    # Palmashow : UCoZoRz4-y6r87ptDp4Jk74g
     # Les kassos : UCv88958LRDfndKV_Y7XmAnA
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
