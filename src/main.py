@@ -5,12 +5,12 @@ class Game:
     def __init__(self):
         # general setup
         pygame.init()
-        self.screen = pygame.display.set_mode(1280, 720)
+        self.screen = pygame.display.set_mode((1280, 720))
         pygame.display.set_caption('Zelda')
         self.clock = pygame.time.Clock()
 
     def run(self):
-        channel_id = 'UCQVaKQcp4OxSg1eC6SF3NTw'
+        channel_id = 'UC_yP2DpIgs5Y1uWC0T03Chw'
 
         loader.loading_loop(channel_id)
         loader.channel_menu_loop(channel_id)

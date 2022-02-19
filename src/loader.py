@@ -1,30 +1,26 @@
+import functools
 import math
 import os
+import random
 import sys
-
-from pygame_gui.core import ObjectID
-from youtube_transcript_api import YouTubeTranscriptApi
-from multiprocessing.pool import ThreadPool
 import threading
-import functools
-
-from youtubesearchpython import *
-import youtube_dl
-
-import yt_dlp as dlp
-
-from pytimeparse.timeparse import timeparse
+from multiprocessing.pool import ThreadPool
+from uuid import uuid4
 
 import pygame
 import pygame_gui
-import skimage
-
 import requests
-
-import random
+import skimage
 import spacy
+import youtube_dl
+import yt_dlp as dlp
+from pygame_gui.core import ObjectID
+from pytimeparse.timeparse import timeparse
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtubesearchpython import *
 
 from src import utils
+from src.scrapper import GoogleImageDownloader
 
 t_lang = 'fr'
 
@@ -36,6 +32,7 @@ progress_status = {
     'progress': 0,
     'thumb': False,
 }
+
 
 def debug(*args):
     if isDebug: print(*args)
@@ -189,7 +186,7 @@ def get_transcriptions_str(channel_id):
 
 
 def get_unique(arr):
-    return list(dict.fromkeys(arr))
+    return [{'id': str(uuid4()), 'name': name} for name in list(dict.fromkeys(arr))]
 
 
 def set_lang(lang):
@@ -210,7 +207,7 @@ def print_progress(i, n, text, data=None):
 
 def get_people_names(channel_id, lang):
     try:
-        return get_data_from_file('names_data', channel_id)
+        return get_data_from_file('unique_names', channel_id)
     except FileNotFoundError:
 
         set_lang(lang)
@@ -236,7 +233,7 @@ def get_people_names(channel_id, lang):
                     functools.partial(get_parted_names, nlp, tag_name), parted_str)
                 )
             ]
-        )), 'names_data', channel_id)
+        )), 'unique_names', channel_id)
 
 
 def spacy_init(lang='en'):
@@ -257,6 +254,19 @@ def spacy_init(lang='en'):
         debug('Language not supported, using default')
         return spacy.load('en_core_web_lg'), 'PERSON', 'en'
 
+
+def get_people_pictures(names):
+    reset_progress('getting people pictures')
+
+    set_progress_status('initializing bs4 ...', 0)
+
+    if not os.path.exists('graphics/pictures'):
+        os.makedirs('graphics/pictures')
+
+    for i, name in enumerate(ThreadPool(
+            len(names)).imap_unordered(functools.partial(GoogleImageDownloader, 'graphics/pictures'),
+                                       names)):
+        set_progress_status(get_progress(i, len(names) - 1), calculate_progress(i, len(names) - 1))
 
 def part_array(arr, n):
     chunk_len = len(arr) // n
@@ -546,14 +556,13 @@ is_loading = True
 def load_parameters_for_channel(channel_id):
     global is_loading
     is_loading = True
-    get_people_names(channel_id, 'fr')
+    get_people_pictures(get_people_names(channel_id, 'fr'))
     Background(channel_id, 8)
     get_musics(channel_id)
     is_loading = False
 
 
 def loading_loop(channel_id):
-
     global is_loading
 
     thread = threading.Thread(target=load_parameters_for_channel, args=[channel_id])
