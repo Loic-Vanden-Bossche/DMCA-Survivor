@@ -393,7 +393,6 @@ class ProgressScreen:
         self._title_label.set_text(status)
 
     def update(self, time_delta):
-        if not self.display: return
 
         self._window_surface.blit(self._background, (0, 0))
 
@@ -423,7 +422,6 @@ class ProgressScreen:
         self.progress = progress
 
     def __init__(self, channel_id, status='', title=''):
-        self.display = True
         self._window_surface = pygame.display.get_surface()
         self._manager = pygame_gui.UIManager(utils.get_dims_from_surface(self._window_surface), 'themes/loading.json')
         self._background = pygame.Surface(utils.get_dims_from_surface(self._window_surface))
@@ -484,7 +482,6 @@ def loading_loop(channel_id):
     pygame.display.set_caption('loading ....')
 
     loading_screen = ProgressScreen(channel_id)
-    loading_screen.display = True
 
     clock = pygame.time.Clock()
 
