@@ -28,8 +28,7 @@ isDebug = True
 progress_status = {
     'status': '',
     'title': '',
-    'progress': 0,
-    'thumb': False,
+    'progress': 0
 }
 
 
@@ -67,7 +66,7 @@ def get_full_video_list_from_yt(channel_id):
 
     download_channel_thumb(channel_id, channel_data['thumb']['url'])
 
-    reset_progress('videos', thumb=True)
+    reset_progress('videos')
 
     return {
         'channel': channel_data,
@@ -93,9 +92,9 @@ def get_transcription_from_yt(video_id):
         return video_id, None
 
 
-def reset_progress(title, thumb=False):
+def reset_progress(title):
     global progress_status
-    progress_status.update(title=title, status='', progress=0, thumb=thumb)
+    progress_status.update(title=title, status='', progress=0)
 
 
 def calculate_progress(n, total):
@@ -220,7 +219,7 @@ def get_people_names(channel_id, lang):
         return save_data(get_unique(flatten(
             [
                 set_progress_status(
-                    get_progress(i, len(parted_str) - 1),
+                    f'{i}%',
                     calculate_progress(i, len(parted_str) - 1),
                     data
                 ) for
@@ -315,7 +314,7 @@ def download_music_from_channel(channel_id, channel):
 
     i = 0
 
-    def my_hook(d):
+    def dl_hook(d):
         if d['status'] == 'downloading':
             set_progress_status(
                 f'{d["_percent_str"]} - {d["_speed_str"]}', calculate_progress(d["downloaded_bytes"], d["total_bytes"]))
@@ -339,7 +338,7 @@ def download_music_from_channel(channel_id, channel):
                     'preferredquality': '192',
                 }],
                 'keepvideo': False,
-                'progress_hooks': [my_hook],
+                'progress_hooks': [dl_hook],
                 'outtmpl': filename,
             }
 
@@ -411,10 +410,11 @@ class ProgressScreen:
 
     def _set_status_from_global(self):
         global progress_status
-        status, title, progress, isThumb = progress_status.values()
+        status, title, progress = progress_status.values()
 
-        if isThumb is True and not self._thumb:
-            img = pygame.image.load(f'cache/{self._channel_id}/thumb.jpg')
+        thumb_path = f'cache/{self._channel_id}/thumb.jpg'
+        if os.path.exists(thumb_path) and not self._thumb:
+            img = pygame.image.load(thumb_path)
             height = 200
             self._thumb = pygame.transform.smoothscale(img, (height * (img.get_width() / img.get_height()), height))
 
