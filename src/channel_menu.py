@@ -91,7 +91,7 @@ class Carrousel:
     def __init__(self, montage_path, height, speed, y_pos=0, direction='right'):
         img = pygame.image.load(montage_path)
         self._window_surface = pygame.display.get_surface()
-        self._image = pygame.transform.smoothscale(img, (height * (img.get_width() / img.get_height()), height))
+        self._image = utils.scale_surface_height(img, height)
         self._speed = speed
         self._direction = direction
         self._left = self._get_left()

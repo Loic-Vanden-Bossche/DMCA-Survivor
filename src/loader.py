@@ -414,8 +414,7 @@ class ProgressScreen:
         thumb_path = f'cache/{self._channel_id}/thumb.jpg'
         if os.path.exists(thumb_path) and not self._thumb:
             img = pygame.image.load(thumb_path)
-            height = 200
-            self._thumb = pygame.transform.smoothscale(img, (height * (img.get_width() / img.get_height()), height))
+            self._thumb = utils.scale_surface_height(img, 200)
 
         self.title = title
         self.status = status
