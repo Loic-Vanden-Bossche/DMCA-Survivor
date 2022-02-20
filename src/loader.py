@@ -2,7 +2,6 @@ import functools
 import math
 import os
 import sys
-import threading
 from multiprocessing.pool import ThreadPool
 from uuid import uuid5, UUID
 
@@ -20,6 +19,7 @@ from youtubesearchpython import *
 
 from src import utils
 from src.scrapper import GoogleImageDownloader
+from src.utils import ThreadWithReturnValue
 
 t_lang = 'fr'
 
@@ -118,6 +118,7 @@ def get_transcriptions_from_ytb(videos_data):
             video_id, _ = data
             yield set_progress_status(videos_data.get(video_id), calculate_progress(i, len(videos_data)), data)
 
+
 def get_data_from_file(file_name, folder):
     folder = 'cache/' + folder
     try:
@@ -180,7 +181,8 @@ def get_transcriptions_str(channel_id):
 
 
 def get_unique(arr):
-    return [{'id': str(uuid5(UUID('6bccb050-91b0-11ec-b13f-cb90244a3835'), name)), 'name': name} for name in list(dict.fromkeys(arr))]
+    return [{'id': str(uuid5(UUID('6bccb050-91b0-11ec-b13f-cb90244a3835'), name)), 'name': name} for name in
+            list(dict.fromkeys(arr))]
 
 
 def set_lang(lang):
@@ -262,9 +264,11 @@ def get_people_pictures(names):
                                        names)):
         set_progress_status(get_progress(i, len(names) - 1), calculate_progress(i, len(names) - 1))
 
+
 def part_array(arr, n):
     chunk_len = len(arr) // n
     return [arr[idx: idx + chunk_len] for idx in range(0, len(arr), chunk_len)]
+
 
 def make_montage(folder, data):
     index, arr = data
@@ -294,6 +298,7 @@ def generate_images(channel_id, rows):
         enumerate(ThreadPool(len(arrays)).imap_unordered(functools.partial(make_montage, folder),
                                                          [(i, arr) for i, arr in enumerate(arrays)]))
     ]
+
 
 def download_music_from_channel(channel_id, channel):
     videos = eval(SearchVideos(f'{channel["name"]} Musique').result())['search_result']
@@ -449,23 +454,31 @@ class ProgressScreen:
 
 is_loading = True
 
+
 def load_parameters_for_channel(channel_id):
     global is_loading
     is_loading = True
-    get_people_pictures(get_people_names(channel_id, 'fr'))
+
+    names = get_people_names(channel_id, 'fr')
+    get_people_pictures(names)
+
     generate_images(channel_id, 8)
+
     get_musics(channel_id)
+
     is_loading = False
+    return names
 
 def load_music(channel_id):
     pygame.mixer.music.load(f'cache/{channel_id}/music.mp3')
     pygame.mixer.music.play()
     pygame.mixer.music.set_volume(0.3)
 
+
 def loading_loop(channel_id):
     global is_loading
 
-    thread = threading.Thread(target=load_parameters_for_channel, args=[channel_id])
+    thread = ThreadWithReturnValue(target=load_parameters_for_channel, args=(channel_id,))
     thread.start()
 
     pygame.display.set_caption('loading ....')
@@ -485,3 +498,5 @@ def loading_loop(channel_id):
         loading_screen.update(time_delta)
 
         pygame.display.update()
+
+    return thread.join()

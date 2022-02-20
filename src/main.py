@@ -11,11 +11,12 @@ class Game:
         pygame.display.set_caption('Zelda')
         self.clock = pygame.time.Clock()
 
-    def run(self):
-        channel_id = 'UC_yP2DpIgs5Y1uWC0T03Chw'
-
+    def start_session(self, channel_id):
         loading_loop(channel_id)
         channel_menu_loop(channel_id)
+
+    def run(self):
+        self.start_session('UC_yP2DpIgs5Y1uWC0T03Chw')
 
 
 def main():
