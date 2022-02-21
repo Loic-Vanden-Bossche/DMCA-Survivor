@@ -1,122 +1,120 @@
-import random
 import sys
 import pygame
+import pygame_gui
+from pygame_gui.core import ObjectID
+
 from src import utils, loader
 
-class Background:
-
-    def update(self, time_delta):
-        self._window_surface.blit(self._background, (0, 0))
-        for carrousel in self._carrousels:
-            carrousel.update(time_delta)
-
-        self._window_surface.blit(self._foreground, (0, 0))
-
-    def _get_image_files(self, folder, rows):
-        files = utils.getFiles(folder, 'img_carrousel_')
-        for idx in range(0, rows - 1):
-            if f'img_carrousel_{idx}.png' not in files:
-                raise FileNotFoundError
-
-        return files
-
-    def _generate_carrousels(self):
-        carrousel_height = self._window_surface.get_height() / self._row_count
-        folder = f'cache/{self._channel_id}/background_cache'
-
-        return [
-            Carrousel(path,
-                      carrousel_height,
-                      random.uniform(10, 20),
-                      index * carrousel_height,
-                      'left' if index % 2 else 'right')
-            for index, path in enumerate([f'{folder}/{file}' for file in self._get_image_files(folder, self._row_count)])
-        ]
-
-    def __init__(self, channel_id, row_count):
-        self._window_surface = pygame.display.get_surface()
-        self._channel_id = channel_id
-        self._row_count = row_count
-        self._background = pygame.Surface(utils.get_dims_from_surface(self._window_surface))
-        self._background.fill(pygame.Color('#000000'))
-        self._foreground = self._background.copy()
-        self._foreground.set_alpha(128)
-        self._carrousels = self._generate_carrousels()
+from dynamic_background import Background
+from src.life_bar import LifeBar
 
 
-class Carrousel:
+class ChannelMenu:
+    def run(self):
+        while self.running:
+            time_delta = self.clock.tick(120) / 1000.0
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
-    def _get_right(self):
-        if self._direction == 'right':
-            return -self._image.get_width()
-        elif self._direction == 'left':
-            return 0
+                if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == self.start_button:
+                        self.running = False
 
-    def _get_left(self):
-        if self._direction == 'right':
-            return 0
-        elif self._direction == 'left':
-            return self._image.get_width()
+                if event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED and event.ui_element == self.dropdown:
+                    self.difficulty = self.dropdown.selected_option
+                    self.life_bar.current_life = self.get_life_from_dropdown_value()
 
-    def _move(self, time_delta):
-        speed = (self._speed * time_delta)
+                self.manager.process_events(event)
 
-        if self._direction == 'right':
-            self._left += speed
-            self._right += speed
-        elif self._direction == 'left':
-            self._left -= speed
-            self._right -= speed
+            self.manager.update(time_delta)
+            self.background.update(time_delta)
 
-    def update(self, time_delta):
+            self.manager.draw_ui(pygame.display.get_surface())
+            self.life_bar.update()
+            pygame.display.update()
 
-        self._move(time_delta)
+        return self.get_life_from_dropdown_value()
 
-        if self._direction == 'right':
-            if round(self._right) == 0:
-                self._right = self._get_right()
+    def init_ui_manager(self):
+        return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), 'themes/menu.json')
 
-            if round(self._left) == self._image.get_width():
-                self._left = self._get_left()
-        elif 'left':
-            if round(self._right) == -self._image.get_width():
-                self._right = self._get_right()
+    def init_main_panel(self):
+        return pygame_gui.elements.UIPanel(relative_rect=utils.get_centered_rect(400, 600),
+                                           starting_layer_height=4,
+                                           manager=self.manager,
+                                           object_id=ObjectID('#panel'))
 
-            if round(self._left) == 0:
-                self._left = self._get_left()
+    def init_button(self, text, width, height):
+        return pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(self.panel.relative_rect.w / 2 - (width / 2), self.panel.relative_rect.h - 90,
+                                      width,
+                                      height),
+            text=text,
+            manager=self.manager,
+            container=self.panel,
+            object_id=ObjectID('#start_button'))
 
-        self._window_surface.blit(self._image, (self._left, self._y_pos))
-        self._window_surface.blit(self._image, (self._right, self._y_pos))
+    def init_dropdown(self):
+        return pygame_gui.elements.UIDropDownMenu(self.difficulties, self.difficulty,
+                                           pygame.Rect(self.panel.relative_rect.w / 2 - (200 / 2), 300,
+                                                       200, 30),
+                                           self.manager,
+                                           container=self.panel)
 
-    def __init__(self, montage_path, height, speed, y_pos=0, direction='right'):
-        img = pygame.image.load(montage_path)
-        self._window_surface = pygame.display.get_surface()
-        self._image = utils.scale_surface_height(img, height)
-        self._speed = speed
-        self._direction = direction
-        self._left = self._get_left()
-        self._right = self._get_right()
-        self._y_pos = y_pos
+    def init_static_content(self):
+        pygame_gui.elements.UILabel(pygame.Rect(0, 140, self.panel.relative_rect.w, 30),
+                                    loader.get_transcriptions_data(self.channel_id)['channel']['name'],
+                                    self.manager,
+                                    self.panel)
 
+        pygame_gui.elements.UILabel(pygame.Rect(0, 190, self.panel.relative_rect.w, 30),
+                                    f'{self.loaded_count} enemies loaded !',
+                                    self.manager,
+                                    self.panel)
 
-def channel_menu_loop(data):
-    is_display_menu = True
+        pygame_gui.elements.ui_image.UIImage(
+            self.thumb.get_rect().move(self.panel.relative_rect.w / 2 - (self.thumb.get_width() / 2), 30),
+            self.thumb,
+            self.manager,
+            self.panel)
 
-    pygame.display.set_caption('Channel menu')
+        pygame_gui.elements.UILabel(
+            pygame.Rect(self.dropdown.relative_rect.x, self.dropdown.relative_rect.y - 30,
+                        self.dropdown.relative_rect.w, 30),
+            f'difficulty',
+            self.manager,
+            container=self.panel)
 
-    loader.load_music(data)
+    def get_life_from_dropdown_value(self):
+        return len(self.difficulties) - self.difficulties.index(self.difficulty)
 
-    menu_back = Background(data, 8)
+    def __init__(self, channel_id, loaded_count):
+        self.channel_id = channel_id
+        self.loaded_count = loaded_count
+        pygame.display.set_caption('Channel menu')
+        loader.load_music(channel_id)
+        self.running = True
 
-    clock = pygame.time.Clock()
+        self.difficulties = ['easy', 'medium', 'hard']
+        self.difficulty = 'medium'
 
-    while is_display_menu:
-        time_delta = clock.tick(120) / 1000.0
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+        self.background = Background(channel_id, 8)
 
-        menu_back.update(time_delta)
+        self.manager = self.init_ui_manager()
 
-        pygame.display.update()
+        self.panel = self.init_main_panel()
+
+        self.start_button = self.init_button('start game', 200, 30)
+
+        self.thumb = utils.scale_surface_height(pygame.image.load(f'cache/{channel_id}/thumb.jpg'), 100)
+
+        self.dropdown = self.init_dropdown()
+
+        self.life_bar = LifeBar(self.panel.rect.x + (self.panel.rect.w/2), self.dropdown.rect.y + 60, 20, 3, 3, 10)
+        self.life_bar.current_life = self.get_life_from_dropdown_value()
+
+        self.init_static_content()
+
+        self.clock = pygame.time.Clock()

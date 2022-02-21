@@ -1,7 +1,8 @@
 import pygame
 
-from src.channel_menu import channel_menu_loop
-from src.loader import loading_loop
+from src.channel_menu import ChannelMenu
+from src.loader import LoadingScreen
+
 
 class Game:
     def __init__(self):
@@ -12,11 +13,13 @@ class Game:
         self.clock = pygame.time.Clock()
 
     def start_session(self, channel_id):
-        loading_loop(channel_id)
-        channel_menu_loop(channel_id)
+        names = LoadingScreen(channel_id).run()
+        difficulty = ChannelMenu(channel_id, len(names)).run()
+
+        print(len(names), difficulty)
 
     def run(self):
-        self.start_session('UC_yP2DpIgs5Y1uWC0T03Chw')
+        self.start_session('UCYGjxo5ifuhnmvhPvCc3DJQ')
 
 
 def main():

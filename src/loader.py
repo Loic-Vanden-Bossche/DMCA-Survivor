@@ -449,50 +449,46 @@ class ProgressScreen:
             object_id=ObjectID('#progress_bar_label'))
 
 
-is_loading = True
-
-
-def load_parameters_for_channel(channel_id):
-    global is_loading
-    is_loading = True
-
-    names = get_people_names(channel_id, 'fr')
-    get_people_pictures(names)
-
-    generate_images(channel_id, 8)
-
-    get_musics(channel_id)
-
-    is_loading = False
-    return names
-
 def load_music(channel_id):
     pygame.mixer.music.load(f'cache/{channel_id}/music.mp3')
     pygame.mixer.music.play()
     pygame.mixer.music.set_volume(0.3)
 
 
-def loading_loop(channel_id):
-    global is_loading
+class LoadingScreen:
+    def run(self):
+        while self.running:
+            time_delta = self.clock.tick(60) / 1000.0
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
-    thread = ThreadWithReturnValue(target=load_parameters_for_channel, args=(channel_id,))
-    thread.start()
+            self.progress_ui.update(time_delta)
 
-    pygame.display.set_caption('loading ....')
+            pygame.display.update()
 
-    loading_screen = ProgressScreen(channel_id)
+        return self.thread.join()
 
-    clock = pygame.time.Clock()
+    def load_parameters_for_channel(self):
+        names = get_people_names(self.channel_id, 'fr')
+        get_people_pictures(names)
 
-    while is_loading:
-        time_delta = clock.tick(60) / 1000.0
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+        generate_images(self.channel_id, 8)
 
-        loading_screen.update(time_delta)
+        get_musics(self.channel_id)
 
-        pygame.display.update()
+        self.running = False
+        return names
 
-    return thread.join()
+    def __init__(self, channel_id):
+        self.channel_id = channel_id
+        self.running = True
+
+        pygame.display.set_caption('loading ....')
+
+        self.thread = ThreadWithReturnValue(target=self.load_parameters_for_channel)
+        self.thread.start()
+
+        self.progress_ui = ProgressScreen(channel_id)
+        self.clock = pygame.time.Clock()
