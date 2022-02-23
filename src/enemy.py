@@ -6,7 +6,7 @@ import pygame_gui
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, player_sprite, manager):
+    def __init__(self, pos, groups, player_sprite, manager, name):
         super().__init__(groups)
         self.image = pygame.image.load('../graphics/placeholder/enemy.jpg').convert_alpha()
         self.rect = self.image.get_rect(center=pos)
@@ -15,6 +15,7 @@ class Enemy(pygame.sprite.Sprite):
         self.collision = 0
         self.life = 5
         self.direction = 0
+        print(f"my name is {name}")
 
         self.life_bar = pygame_gui.elements.UIStatusBar(pygame.Rect((0, 0), (60, 8)),
                                                         manager,
@@ -73,4 +74,5 @@ class Enemy(pygame.sprite.Sprite):
             self.life_bar.kill()
             self.timer_bar.kill()
             self.kill()
+            print('mort')
             del self

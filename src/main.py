@@ -14,7 +14,7 @@ class Game:
         pygame.display.set_caption('Zelda')
         self.clock = pygame.time.Clock()
 
-        self.level = Level()
+        self.level = Level(1, ['bernard', 'francois', 'vincent'])
 
     def run(self):
         # channel_id = 'UCQVaKQcp4OxSg1eC6SF3NTw'
