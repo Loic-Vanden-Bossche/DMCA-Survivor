@@ -449,10 +449,10 @@ class ProgressScreen:
             object_id=ObjectID('#progress_bar_label'))
 
 
-def load_music(channel_id):
-    pygame.mixer.music.load(f'cache/{channel_id}/music.mp3')
+def load_music(path, volume=0.3):
+    pygame.mixer.music.load(path)
     pygame.mixer.music.play()
-    pygame.mixer.music.set_volume(0.3)
+    pygame.mixer.music.set_volume(volume)
 
 
 class LoadingScreen:
@@ -461,8 +461,7 @@ class LoadingScreen:
             time_delta = self.clock.tick(60) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+                    utils.exit_app()
 
             self.progress_ui.update(time_delta)
 

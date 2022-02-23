@@ -15,8 +15,7 @@ class ChannelMenu:
             time_delta = self.clock.tick(120) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+                    utils.exit_app()
 
                 if event.type == pygame_gui.UI_BUTTON_PRESSED:
                     if event.ui_element == self.start_button:
@@ -94,7 +93,7 @@ class ChannelMenu:
         self.channel_id = channel_id
         self.loaded_count = loaded_count
         pygame.display.set_caption('Channel menu')
-        loader.load_music(channel_id)
+        loader.load_music(f'cache/{channel_id}/music.mp3')
         self.running = True
 
         self.difficulties = ['easy', 'medium', 'hard']

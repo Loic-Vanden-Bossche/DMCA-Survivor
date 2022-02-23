@@ -1,4 +1,5 @@
 import os
+import sys
 from threading import Thread
 import pygame
 
@@ -43,3 +44,8 @@ def scale_surface_height(surface: pygame.Surface, height: int):
 
 def getFiles(folder, start='data_'):
     return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith(start)]
+
+
+def exit_app():
+    pygame.quit()
+    sys.exit()
