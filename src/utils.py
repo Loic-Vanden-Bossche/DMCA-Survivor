@@ -1,4 +1,23 @@
+import os
+import sys
+from threading import Thread
 import pygame
+
+
+class ThreadWithReturnValue(Thread):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+
+    def run(self):
+        print(type(self._target))
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+
+    def join(self, *args):
+        Thread.join(self, *args)
+        return self._return
+
 
 def get_centered_rect(w, h, y_offset=0):
     return pygame.Rect(
@@ -17,3 +36,16 @@ def get_dims_from_surface(surface: pygame.Surface):
 
 def get_dims_from_display():
     return pygame.display.get_surface().get_width(), pygame.display.get_surface().get_height()
+
+
+def scale_surface_height(surface: pygame.Surface, height: int):
+    return pygame.transform.smoothscale(surface, (height * (surface.get_width() / surface.get_height()), height))
+
+
+def getFiles(folder, start='data_'):
+    return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith(start)]
+
+
+def exit_app():
+    pygame.quit()
+    sys.exit()

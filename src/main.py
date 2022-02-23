@@ -1,18 +1,19 @@
 import sys
 
 import pygame
-import loader
-from settings import *
-from level import Level
 
 
-class Game:
+from src.main_menu import MainMenu
+
+
+class Game(MainMenu):
     def __init__(self):
         # general setup
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('Zelda')
         self.clock = pygame.time.Clock()
+        super().__init__()
 
         self.level = Level(1, ['bernard', 'francois', 'vincent'])
 
@@ -40,8 +41,7 @@ def main():
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
 
-    game = Game()
-    game.run()
+    Game().run()
 
 
 if __name__ == "__main__":

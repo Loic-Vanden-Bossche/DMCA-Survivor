@@ -1,0 +1,98 @@
+{
+  "#start_button":
+  {
+    "misc":
+    {
+      "shape": "rounded_rectangle",
+      "shape_corner_radius": "4",
+      "border_width": "1",
+      "shadow_width": "2",
+      "state_transitions":
+      {
+          "normal_hovered": "0.2",
+          "hovered_normal": "0.5"
+      }
+    }
+  },
+
+  "panel":
+  {
+    "misc":
+    {
+      "shape": "rounded_rectangle",
+      "shape_corner_radius": "4",
+      "border_width": "1",
+      "shadow_width": "2"
+    }
+  },
+
+  "#drop_down_shape_prototype":
+  {
+    "misc": {
+      "shape": "rounded_rectangle",
+      "shape_corner_radius": "4"
+    }
+  },
+  "drop_down_menu":
+  {
+    "prototype": "#drop_down_shape_prototype",
+
+    "misc":
+    {
+      "shadow_width": "2",
+      "border_width": "1",
+      "expand_direction": "up",
+      "open_button_width": "0"
+    }
+  },
+
+  "drop_down_menu.#drop_down_options_list":
+  {
+    "prototype": "#drop_down_shape_prototype",
+
+    "misc":
+    {
+      "shadow_width": "2",
+      "border_width": "1"
+    }
+  },
+
+  "drop_down_menu.#drop_down_options_list.vertical_scroll_bar":
+  {
+    "misc":
+    {
+      "shadow_width": "0",
+      "border_width": "1",
+      "enable_arrow_buttons": "0"
+    }
+  },
+
+  "drop_down_menu.#drop_down_options_list.button":
+  {
+    "misc":
+    {
+      "shadow_width": "0",
+      "border_width": "0",
+
+      "state_transitions":
+      {
+        "normal_hovered": "0.2",
+        "hovered_normal": "0.5"
+      }
+    }
+  },
+
+  "drop_down_menu.button":
+  {
+    "misc":
+    {
+      "shadow_width": "0",
+      "border_width": "0",
+      "state_transitions":
+      {
+        "normal_hovered": "0.2",
+        "hovered_normal": "0.5"
+      }
+    }
+  }
+}
