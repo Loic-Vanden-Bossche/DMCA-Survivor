@@ -2,8 +2,11 @@ import sys
 
 import pygame
 
-
+from src.channel_menu import ChannelMenu
+from src.level import Level
+from src.loader import LoadingScreen
 from src.main_menu import MainMenu
+from settings import *
 
 
 class Game(MainMenu):
@@ -15,14 +18,13 @@ class Game(MainMenu):
         self.clock = pygame.time.Clock()
         super().__init__()
 
-        self.level = Level(1, ['bernard', 'francois', 'vincent'])
+        self.level = None
 
-    def run(self):
-        # channel_id = 'UCQVaKQcp4OxSg1eC6SF3NTw'
-        # loader.loading_loop(channel_id)
-        # loader.channel_menu_loop(channel_id)
+    def run_game(self):
 
-        while True:
+        running = True
+
+        while running:
             time_delta = self.clock.tick(60)/1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -30,9 +32,21 @@ class Game(MainMenu):
                     sys.exit()
                 self.level.input(event)
 
+            if not self.level.player.is_alive():
+                running = False
+
             self.screen.fill('black')
             self.level.run(time_delta)
             pygame.display.update()
+
+    def temp_run(self, channel_id):
+
+        names = LoadingScreen(channel_id).run()
+        difficulty = ChannelMenu(channel_id, len(names)).run()
+
+        self.level = Level(difficulty, names)
+        self.run_game()
+
 
 
 def main():
@@ -41,7 +55,7 @@ def main():
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
 
-    Game().run()
+    Game().temp_run('UCYGjxo5ifuhnmvhPvCc3DJQ')
 
 
 if __name__ == "__main__":

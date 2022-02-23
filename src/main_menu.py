@@ -153,7 +153,7 @@ class NewGameWindow(UIWindow):
 
 class MainMenu:
     def run(self):
-        loader.load_music('music.mp3', 0.1)
+        loader.load_music('../music.mp3', 0.1)
 
         while self.running:
             time_delta = self.clock.tick(120) / 1000.0
@@ -188,7 +188,7 @@ class MainMenu:
                     print(self.new_game_window.search_module.text)
 
     def init_ui_manager(self):
-        return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), 'themes/main.json')
+        return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), '../themes/main.json')
 
     def init_main_panel(self):
         return pygame_gui.elements.UIPanel(relative_rect=utils.get_centered_rect(500, 800),
@@ -224,7 +224,7 @@ class MainMenu:
         print(len(names), difficulty)
 
     def __init__(self):
-        self.back = utils.scale_surface_height(pygame.image.load('graphics/background.jpg'),
+        self.back = utils.scale_surface_height(pygame.image.load('../graphics/background.jpg'),
                                                pygame.display.get_surface().get_height())
         self.running = True
 

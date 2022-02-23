@@ -22,7 +22,7 @@ class Background:
 
     def _generate_carrousels(self):
         carrousel_height = self._window_surface.get_height() / self._row_count
-        folder = f'cache/{self._channel_id}/background_cache'
+        folder = f'../cache/{self._channel_id}/background_cache'
 
         return [
             Carrousel(path,

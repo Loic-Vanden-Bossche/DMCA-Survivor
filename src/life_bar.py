@@ -36,8 +36,8 @@ class LifeBar:
         self.x = x
         self.y = y
 
-        self.filled = utils.scale_surface_height(pygame.image.load('graphics/heart-filled.png'), height)
-        self.unfilled = utils.scale_surface_height(pygame.image.load('graphics/heart-unfilled.png'), height)
+        self.filled = utils.scale_surface_height(pygame.image.load('../graphics/heart-filled.png'), height)
+        self.unfilled = utils.scale_surface_height(pygame.image.load('../graphics/heart-unfilled.png'), height)
         self.sprite_width = self.filled.get_width()
         self.padding = padding
 

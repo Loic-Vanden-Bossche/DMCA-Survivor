@@ -1,7 +1,6 @@
 import functools
 import math
 import os
-import sys
 from multiprocessing.pool import ThreadPool
 from uuid import uuid5, UUID
 
@@ -49,11 +48,11 @@ def format_video_infos(infos):
 
 
 def download_channel_thumb(channel_id, link):
-    if not os.path.exists(f'cache/{channel_id}'):
-        os.makedirs(f'cache/{channel_id}')
+    if not os.path.exists(f'../cache/{channel_id}'):
+        os.makedirs(f'../cache/{channel_id}')
 
     img_data = requests.get(link).content
-    with open(f'cache/{channel_id}/thumb.jpg', 'wb') as handler:
+    with open(f'../cache/{channel_id}/thumb.jpg', 'wb') as handler:
         handler.write(img_data)
 
 
@@ -119,7 +118,7 @@ def get_transcriptions_from_ytb(videos_data):
 
 
 def get_data_from_file(file_name, folder):
-    folder = 'cache/' + folder
+    folder = '../cache/' + folder
     try:
         with open(f'{folder}/{file_name}', 'r', encoding='utf-8') as f:
             return eval(f.read())
@@ -138,7 +137,7 @@ def get_transcriptions_data(channel_id):
 
 
 def save_data(data, file_name, folder):
-    folder = 'cache/' + folder
+    folder = '../cache/' + folder
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -255,11 +254,13 @@ def get_people_pictures(names):
 
     set_progress_status('initializing bs4 ...', 0)
 
-    if not os.path.exists('graphics/pictures'):
-        os.makedirs('graphics/pictures')
+    folder = '../graphics/pictures'
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
     for i, name in enumerate(ThreadPool(
-            len(names)).imap_unordered(functools.partial(GoogleImageDownloader, 'graphics/pictures'),
+            len(names)).imap_unordered(functools.partial(GoogleImageDownloader, folder),
                                        names)):
         set_progress_status(get_progress(i, len(names) - 1), calculate_progress(i, len(names) - 1))
 
@@ -284,7 +285,7 @@ def make_montage(folder, data):
 def generate_images(channel_id, rows):
     arrays = part_array(list(get_transcriptions_data(channel_id)['videos'].keys()), rows)[:-1]
 
-    folder = f'cache/{channel_id}/background_cache'
+    folder = f'../cache/{channel_id}/background_cache'
 
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -329,7 +330,7 @@ def download_music_from_channel(channel_id, channel):
             video_info = dlp.YoutubeDL().extract_info(
                 url=video_url, download=False
             )
-            filename = f"cache/{channel_id}/music.webm"
+            filename = f"../cache/{channel_id}/music.webm"
             options = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -357,7 +358,7 @@ def download_music_from_channel(channel_id, channel):
 
 def get_musics(channel_id):
     channel, _ = get_transcriptions_data(channel_id).values()
-    folder = f'cache/{channel_id}'
+    folder = f'../cache/{channel_id}'
 
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -411,7 +412,7 @@ class ProgressScreen:
         global progress_status
         status, title, progress = progress_status.values()
 
-        thumb_path = f'cache/{self._channel_id}/thumb.jpg'
+        thumb_path = f'../cache/{self._channel_id}/thumb.jpg'
         if os.path.exists(thumb_path) and not self._thumb:
             img = pygame.image.load(thumb_path)
             self._thumb = utils.scale_surface_height(img, 200)
@@ -422,7 +423,7 @@ class ProgressScreen:
 
     def __init__(self, channel_id, status='', title=''):
         self._window_surface = pygame.display.get_surface()
-        self._manager = pygame_gui.UIManager(utils.get_dims_from_surface(self._window_surface), 'themes/loading.json')
+        self._manager = pygame_gui.UIManager(utils.get_dims_from_surface(self._window_surface), '../themes/loading.json')
         self._background = pygame.Surface(utils.get_dims_from_surface(self._window_surface))
         self._background.fill(self._manager.ui_theme.get_colour('dark_bg'))
 
@@ -449,7 +450,7 @@ class ProgressScreen:
             object_id=ObjectID('#progress_bar_label'))
 
 
-def load_music(path, volume=0.3):
+def load_music(path, volume=0):
     pygame.mixer.music.load(path)
     pygame.mixer.music.play()
     pygame.mixer.music.set_volume(volume)

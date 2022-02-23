@@ -1,4 +1,3 @@
-import sys
 import pygame
 import pygame_gui
 from pygame_gui.core import ObjectID
@@ -37,7 +36,7 @@ class ChannelMenu:
         return self.get_life_from_dropdown_value()
 
     def init_ui_manager(self):
-        return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), 'themes/menu.json')
+        return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), '../themes/menu.json')
 
     def init_main_panel(self):
         return pygame_gui.elements.UIPanel(relative_rect=utils.get_centered_rect(400, 600),
@@ -93,7 +92,7 @@ class ChannelMenu:
         self.channel_id = channel_id
         self.loaded_count = loaded_count
         pygame.display.set_caption('Channel menu')
-        loader.load_music(f'cache/{channel_id}/music.mp3')
+        loader.load_music(f'../cache/{channel_id}/music.mp3')
         self.running = True
 
         self.difficulties = ['easy', 'medium', 'hard']
@@ -107,7 +106,7 @@ class ChannelMenu:
 
         self.start_button = self.init_button('start game', 200, 30)
 
-        self.thumb = utils.scale_surface_height(pygame.image.load(f'cache/{channel_id}/thumb.jpg'), 100)
+        self.thumb = utils.scale_surface_height(pygame.image.load(f'../cache/{channel_id}/thumb.jpg'), 100)
 
         self.dropdown = self.init_dropdown()
 

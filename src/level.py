@@ -7,6 +7,26 @@ import pygame_gui
 from random import *
 
 
+class Names:
+
+    def get_cursor(self):
+        if self._cursor >= len(self._names):
+            self._cursor = -1
+
+        self._cursor += 1
+        return self._cursor
+
+    @property
+    def current(self):
+        return self._names[self.get_cursor()]
+
+    def __init__(self, names):
+        self._cursor = -1
+
+        shuffle(names)
+        self._names = names
+
+
 def sprite_alive(sprite):
     return sprite.alive()
 
@@ -25,7 +45,7 @@ class Level:
         self.timeToEnemySpawn = None
         self.inFight = True
         self.enemiesSpawned = 0
-        self.enemiesNames = names
+        self.enemiesNames = Names(names)
 
     def input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -34,19 +54,19 @@ class Level:
 
     def spawn_enemy(self):
         if choice([0, 1]):
-            x_position = randint(-30, WIDTH+30)
-            y_position = choice([randint(-30, 0), randint(HEIGHT, HEIGHT+30)])
+            x_position = randint(-30, WIDTH + 30)
+            y_position = choice([randint(-30, 0), randint(HEIGHT, HEIGHT + 30)])
 
         else:
-            x_position = choice([randint(-30, 0), randint(WIDTH, WIDTH+30)])
-            y_position = randint(-30, HEIGHT+30)
+            x_position = choice([randint(-30, 0), randint(WIDTH, WIDTH + 30)])
+            y_position = randint(-30, HEIGHT + 30)
 
         self.enemies.append(Enemy(
             (x_position, y_position),
             [self.visible_sprites],
             self.player,
             self._manager,
-            choice(self.enemiesNames)))
+            self.enemiesNames.current))
         self.enemiesSpawned += 1
 
     def run(self, time_delta):
