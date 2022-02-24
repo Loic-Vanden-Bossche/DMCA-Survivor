@@ -11,6 +11,7 @@ from youtubesearchpython import ChannelsSearch
 from src import utils, loader
 from src.channel_menu import ChannelMenu
 from src.loader import LoadingScreen
+from src.tower_defense import TowerDefense
 
 
 class SeamLessBackground:
@@ -46,7 +47,8 @@ class SearchResult(pygame_gui.elements.UIPanel):
         self.thumb = pygame.image.load(io.BytesIO(image_str))
 
         pygame_gui.elements.ui_image.UIImage(
-            pygame.Rect((padding, 50), (self.relative_rect.h - (padding*2) - 20, self.relative_rect.h - (padding*2) - 20)),
+            pygame.Rect((padding, 50),
+                        (self.relative_rect.h - (padding * 2) - 20, self.relative_rect.h - (padding * 2) - 20)),
             utils.scale_surface_height(self.thumb, self.relative_rect.h),
             manager,
             self)
@@ -172,6 +174,15 @@ class SelectedPanel(pygame_gui.elements.UIPanel):
                                     manager,
                                     self)
 
+        width, height, padding = (150, 50, 30)
+
+        self.id = data['id']
+
+        self.button = pygame_gui.elements.UIButton(pygame.Rect(self.relative_rect.w - width - padding,
+                                                               self.relative_rect.h - height - padding,
+                                                               width, height),
+                                                   'start session', manager, self)
+
 
 class NewGameWindow(UIWindow):
 
@@ -187,8 +198,8 @@ class NewGameWindow(UIWindow):
         width = (self.rect.width - 70) / 2
         height = (self.rect.h - 60) - (2 * self._padding_from_borders)
 
-        return pygame.Rect(((self._padding_from_borders*(idx+1)) + (idx*width), self._padding_from_borders),
-                                      (width, height))
+        return pygame.Rect(((self._padding_from_borders * (idx + 1)) + (idx * width), self._padding_from_borders),
+                           (width, height))
 
     def set_selected(self, data, image):
         if self.selected_panel:
@@ -200,6 +211,13 @@ class NewGameWindow(UIWindow):
         for res in self.search_module.results:
             if event.ui_element == res.button:
                 self.set_selected(res.data, res.thumb)
+
+        if self.selected_panel:
+            if event.ui_element == self.selected_panel.button:
+                names = LoadingScreen(self.selected_panel.id).run()
+                difficulty = ChannelMenu(self.selected_panel.id, len(names)).run()
+
+                TowerDefense(difficulty, names).run()
 
     def __init__(self, ui_manager):
         window_width, window_height = pygame.display.get_window_size()
@@ -303,12 +321,6 @@ class MainMenu:
     def init_menu_buttons(self, labels, width, height, y_offset, padding):
         return [self.init_menu_button(label, width, height, (i * height) + y_offset + (i * padding)) for i, label in
                 enumerate(labels)]
-
-    def start_session(self, channel_id):
-        names = LoadingScreen(channel_id).run()
-        difficulty = ChannelMenu(channel_id, len(names)).run()
-
-        print(len(names), difficulty)
 
     def __init__(self):
         self.back = utils.scale_surface_height(pygame.image.load('../graphics/background.jpg'),
