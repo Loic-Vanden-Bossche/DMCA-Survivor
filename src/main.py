@@ -55,7 +55,9 @@ def main():
     # Wankil Studio : UCYGjxo5ifuhnmvhPvCc3DJQ
     # JDG : UC_yP2DpIgs5Y1uWC0T03Chw
 
-    Game().temp_run('UCYGjxo5ifuhnmvhPvCc3DJQ')
+    #Game().temp_run('UCoZoRz4-y6r87ptDp4Jk74g')
+
+    Game().run()
 
 
 if __name__ == "__main__":

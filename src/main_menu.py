@@ -1,9 +1,12 @@
+import io
 import math
+from urllib.request import urlopen
 
 import pygame
 import pygame_gui
 from pygame_gui.core import ObjectID
 from pygame_gui.elements import UIWindow, UITextEntryLine
+from youtubesearchpython import ChannelsSearch
 
 from src import utils, loader
 from src.channel_menu import ChannelMenu
@@ -25,9 +28,37 @@ class SeamLessBackground:
 
 
 class SearchResult(pygame_gui.elements.UIPanel):
-    def __init__(self, padding, height, width, index, y_offset, manager, container):
+    def __init__(self, padding, height, width, index, y_offset, manager, container, channel_data):
         super().__init__(pygame.Rect((0 + padding, ((index * height) + (index * y_offset)) + padding), (width, height)),
                          5, manager, container=container)
+
+        self.data = channel_data
+
+        padding = 30
+
+        pygame_gui.elements.UILabel(pygame.Rect(padding, 10, self.relative_rect.w, padding),
+                                    self.data['name'],
+                                    manager,
+                                    self,
+                                    object_id=ObjectID('#lefttext'))
+
+        image_str = urlopen(f"https:{self.data['image']}").read()
+        self.thumb = pygame.image.load(io.BytesIO(image_str))
+
+        pygame_gui.elements.ui_image.UIImage(
+            pygame.Rect((padding, 50), (self.relative_rect.h - (padding*2) - 20, self.relative_rect.h - (padding*2) - 20)),
+            utils.scale_surface_height(self.thumb, self.relative_rect.h),
+            manager,
+            self)
+
+        width, height = (150, 50)
+
+        self.button = pygame_gui.elements.UIButton(pygame.Rect(self.relative_rect.w - width - padding,
+                                                               self.relative_rect.h - height - padding,
+                                                               width, height),
+                                                   'select',
+                                                   manager,
+                                                   self)
 
 
 class ScrollablePanel(pygame_gui.elements.UIPanel):
@@ -60,13 +91,17 @@ class SearchResults(ScrollablePanel):
 
     @results.setter
     def results(self, results):
+        for res in self._results:
+            res.kill()
+
         self._results = [
             SearchResult(self._entry_padding,
                          self._entry_height,
                          self._entry_width, i,
                          self._entry_y_offset,
                          self._manager,
-                         self.container)
+                         self.container,
+                         result)
             for i, result in enumerate(results)
         ]
         self.scroll_height = self._entry_padding + \
@@ -76,10 +111,10 @@ class SearchResults(ScrollablePanel):
     def __init__(self, rect, ui_manager, panel):
         super().__init__(rect, ui_manager, panel)
 
-        self._entry_height = 100
-        self._entry_width = 250
         self._entry_padding = 10
         self._entry_y_offset = 20
+        self._entry_width = rect.w - (self._entry_padding * 2) - 30
+        self._entry_height = self._entry_width * 0.4
 
         self._manager = ui_manager
         self._results = []
@@ -95,8 +130,16 @@ class SearchModule:
     def text(self, status):
         self.entry.set_text(status)
 
-    def __init__(self, pos, ui_manager, container):
-        self.entry = UITextEntryLine(pygame.Rect(pos, (200, 35)),
+    @property
+    def results(self):
+        return self.results_container.results
+
+    @results.setter
+    def results(self, results):
+        self.results_container.results = results
+
+    def __init__(self, padding, ui_manager, container):
+        self.entry = UITextEntryLine(pygame.Rect((padding, padding), (200, 35)),
                                      ui_manager,
                                      container=container,
                                      object_id='#search_text_entry')
@@ -112,19 +155,51 @@ class SearchModule:
             text=''
         )
 
+        y_offset = 80
+
+        self.results_container = SearchResults(pygame.Rect((padding, y_offset),
+                                                           (container.relative_rect.w - (padding * 2),
+                                                            container.relative_rect.h - y_offset - padding)),
+                                               ui_manager, container)
+
+
+class SelectedPanel(pygame_gui.elements.UIPanel):
+    def __init__(self, relative_rect, manager, container, image: pygame.Surface, data):
+        super().__init__(relative_rect, 1, manager, container=container)
+
+        pygame_gui.elements.UIImage(pygame.Rect(0, 0, 300, 300),
+                                    image,
+                                    manager,
+                                    self)
+
 
 class NewGameWindow(UIWindow):
 
-    def init_main_panel(self, padding_from_borders=0):
-        calculated_rect = pygame.Rect((padding_from_borders, padding_from_borders),
-                                      ((self.get_relative_rect().width / 2) - (2 * padding_from_borders),
-                                       (self.rect.h - 60) - (2 * padding_from_borders)))
-
-        return pygame_gui.elements.UIPanel(relative_rect=calculated_rect,
+    def init_search_panel(self):
+        return pygame_gui.elements.UIPanel(relative_rect=self.calculate_Rect(0),
                                            starting_layer_height=4,
                                            manager=self._manager,
                                            container=self,
                                            object_id=ObjectID('#panel'))
+
+    def calculate_Rect(self, idx):
+
+        width = (self.rect.width - 70) / 2
+        height = (self.rect.h - 60) - (2 * self._padding_from_borders)
+
+        return pygame.Rect(((self._padding_from_borders*(idx+1)) + (idx*width), self._padding_from_borders),
+                                      (width, height))
+
+    def set_selected(self, data, image):
+        if self.selected_panel:
+            self.selected_panel.kill()
+
+        self.selected_panel = SelectedPanel(self.calculate_Rect(1), self._manager, self, image, data)
+
+    def check_events(self, event):
+        for res in self.search_module.results:
+            if event.ui_element == res.button:
+                self.set_selected(res.data, res.thumb)
 
     def __init__(self, ui_manager):
         window_width, window_height = pygame.display.get_window_size()
@@ -139,14 +214,11 @@ class NewGameWindow(UIWindow):
             window_display_title='Create a new session',
         )
 
-        self.panel = self.init_main_panel(10)
+        self._padding_from_borders = 10
 
-        padding = 20
-
-        self.results_container = SearchResults(pygame.Rect((padding, 80), (300, 300)), self._manager, self.panel)
-        self.results_container.results = range(0, 10)
-
-        self.search_module = SearchModule((padding, padding), self._manager, self.panel)
+        self.panel = self.init_search_panel()
+        self.search_module = SearchModule(20, self._manager, self.panel)
+        self.selected_panel = None
 
         self.set_blocking(True)
 
@@ -163,7 +235,7 @@ class MainMenu:
 
                 if (event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED and
                         event.ui_element == self.new_game_window.search_module.entry):
-                    print(event.text)
+                    self.on_search(event.text)
 
                 self._manager.process_events(event)
                 self.check_buttons(event)
@@ -175,6 +247,19 @@ class MainMenu:
             self._manager.draw_ui(pygame.display.get_surface())
             pygame.display.update()
 
+    def on_search(self, query):
+        channelsSearch = ChannelsSearch(query, limit=10)
+        self.new_game_window.search_module.results = [
+            {
+                'id': c['id'],
+                'name': c['title'],
+                'image': c['thumbnails'][0]['url'],
+                'sub': c['subscribers'],
+                'v_count': c['videoCount']
+            }
+            for c in channelsSearch.result().get('result')
+        ]
+
     def check_buttons(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.quit_button:
@@ -185,7 +270,9 @@ class MainMenu:
 
             if self.new_game_window:
                 if event.ui_element == self.new_game_window.search_module.button:
-                    print(self.new_game_window.search_module.text)
+                    self.on_search(self.new_game_window.search_module.text)
+
+            self.new_game_window.check_events(event)
 
     def init_ui_manager(self):
         return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), '../themes/main.json')

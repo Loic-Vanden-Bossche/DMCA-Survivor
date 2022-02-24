@@ -21,5 +21,12 @@
         "package": "graphics"
       }
     }
+  },
+
+  "#lefttext": {
+    "misc": {
+      "text_horiz_alignment": "left",
+      "text_horiz_alignment_padding": 20
+    }
   }
 }
