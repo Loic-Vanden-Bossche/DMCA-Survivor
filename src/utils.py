@@ -45,6 +45,13 @@ def scale_surface_height(surface: pygame.Surface, height: int):
 def getFiles(folder, start='data_'):
     return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith(start)]
 
+def part_array(arr, n):
+    chunk_len = len(arr) // n
+    return [arr[idx: idx + chunk_len] for idx in range(0, len(arr), chunk_len)]
+
+
+def chunk_array(arr, n):
+    return [arr[i * n:(i + 1) * n] for i in range((len(arr) + n - 1) // n )]
 
 def exit_app():
     pygame.quit()

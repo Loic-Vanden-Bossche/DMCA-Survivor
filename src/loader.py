@@ -18,9 +18,15 @@ from youtubesearchpython import *
 
 from src import utils
 from src.scrapper import GoogleImageDownloader
-from src.utils import ThreadWithReturnValue
+from src.settings import SAMPLE_SIZE
+from src.utils import ThreadWithReturnValue, part_array
 
 t_lang = 'fr'
+
+models = {
+    'en': ('en_core_web_lg', 'PERSON'),
+    'fr': ('fr_core_news_lg', 'PER')
+}
 
 isDebug = True
 
@@ -67,26 +73,35 @@ def get_full_video_list_from_yt(channel_id):
 
     reset_progress('videos')
 
+    chunk_size = 250
+
     return {
         'channel': channel_data,
         'videos': dict({
             item["id"]: item["title"] for item in
             sorted([
                 set_progress_status(
-                    f'{get_progress(i, len(playlist.videos))} - {x["title"]}',
-                    calculate_progress(i, len(playlist.videos)),
-                    x)
-                for i, x in
-                enumerate(
-                    ThreadPool(len(playlist.videos)).imap_unordered(Video.get, [v["id"] for v in playlist.videos]))
-            ], key=lambda x: int(x['viewCount']['text']), reverse=True)[0:100]
+                    f'{get_progress(i + (y * chunk_size), len(playlist.videos))} - {video["title"]}',
+                    calculate_progress(i + (y * chunk_size), len(playlist.videos)), video)
+                for y, chunk in enumerate(utils.chunk_array(playlist.videos, chunk_size))
+                for i, video in enumerate(
+                    ThreadPool(len(playlist.videos)).imap_unordered(Video.get, [v["id"] for v in chunk]), 1)
+            ], key=lambda x: int(x['viewCount']['text']), reverse=True)[0:SAMPLE_SIZE]
         })
     }
 
 
+def get_tr_lang(langs):
+    p_langs = [lang for lang in langs if lang in models.keys()]
+    if len(p_langs) == 0:
+        return 'fr'
+
+    return p_langs[0]
+
+
 def get_transcription_from_yt(video_id):
     try:
-        return video_id, YouTubeTranscriptApi.get_transcript(video_id, [t_lang])
+        return video_id, YouTubeTranscriptApi.get_transcript(video_id, [get_lang()])
     except (ValueError, Exception):
         return video_id, None
 
@@ -147,8 +162,28 @@ def save_data(data, file_name, folder):
     return data
 
 
+def determine_lang(video_list):
+    def get_list(video_id):
+        try:
+            return YouTubeTranscriptApi.list_transcripts(video_id)
+        except Exception:
+            return []
+
+    langs = [
+        item.language_code for tr_list in
+        ThreadPool(len(video_list.keys())).imap_unordered(get_list, video_list.keys()) for item in
+        tr_list
+    ]
+
+    return get_tr_lang(list(dict(sorted({x: langs.count(x)
+                                         for x in langs}.items(), key=lambda item: item[1], reverse=True)).keys()))
+
+
 def get_transcriptions_data_from_ytb(channel_id):
     channel_data, video_list = get_full_video_list_from_yt(channel_id).values()
+
+    set_lang(determine_lang(video_list))
+
     return save_data({'channel': channel_data,
                       'videos': {video_id: transcription for video_id, transcription in
                                  get_transcriptions_from_ytb(video_list)}}, 'channel_data', channel_id)
@@ -188,6 +223,10 @@ def set_lang(lang):
     t_lang = lang
 
 
+def get_lang():
+    return t_lang
+
+
 def get_parted_names(nlp, tag_name, parted_str):
     return [ent.text.strip() for ent in nlp(parted_str).ents if ent.label_ == tag_name]
 
@@ -199,12 +238,10 @@ def print_progress(i, n, text, data=None):
     return data
 
 
-def get_people_names(channel_id, lang):
+def get_people_names(channel_id):
     try:
         return get_data_from_file('unique_names', channel_id)
     except FileNotFoundError:
-
-        set_lang(lang)
 
         parted_str = part_str(get_transcriptions_str(channel_id), 100)
 
@@ -212,7 +249,7 @@ def get_people_names(channel_id, lang):
 
         set_progress_status('initializing spacy ...', 0)
 
-        nlp, model, tag_name, lang = spacy_init(lang)
+        nlp, model, tag_name, lang = spacy_init(get_lang())
 
         debug(f'No cache found, creating with model {model} ...')
         return save_data(get_unique(flatten(
@@ -233,10 +270,7 @@ def get_people_names(channel_id, lang):
 def spacy_init(lang='en'):
     try:
         lang = lang.lower()
-        model_name, tag_name = {
-            'en': ('en_core_web_lg', 'PERSON'),
-            'fr': ('fr_core_news_lg', 'PER')
-        }[lang]
+        model_name, tag_name = models[lang]
 
         try:
             spacy.cli.info(model_name)
@@ -259,16 +293,18 @@ def get_people_pictures(names):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    for i, name in enumerate(ThreadPool(
-            len(names)).imap_unordered(functools.partial(GoogleImageDownloader, folder),
-                                       names)):
-        set_progress_status(get_progress(i, len(names) - 1), calculate_progress(i, len(names) - 1))
+    chunk_size = 250
 
+    downloaded_status = [
+        set_progress_status(get_progress(i + (y * chunk_size), len(names)),
+                            calculate_progress(i + (y * chunk_size), len(names)),
+                            value.status)
+        for y, chunk in enumerate(utils.chunk_array(names, chunk_size))
+        for i, value in enumerate(ThreadPool(len(names)).imap_unordered(functools.partial(GoogleImageDownloader, folder), chunk), 1)
+    ]
 
-def part_array(arr, n):
-    chunk_len = len(arr) // n
-    return [arr[idx: idx + chunk_len] for idx in range(0, len(arr), chunk_len)]
-
+    debug(f'{downloaded_status.count(True)} pictures downloaded with'
+          f' {round(downloaded_status.count(True) / len(names) * 100, 3)}% accuracy')
 
 def make_montage(folder, data):
     index, arr = data
@@ -423,7 +459,8 @@ class ProgressScreen:
 
     def __init__(self, channel_id, status='', title=''):
         self._window_surface = pygame.display.get_surface()
-        self._manager = pygame_gui.UIManager(utils.get_dims_from_surface(self._window_surface), '../themes/loading.json')
+        self._manager = pygame_gui.UIManager(utils.get_dims_from_surface(self._window_surface),
+                                             '../themes/loading.json')
         self._background = pygame.Surface(utils.get_dims_from_surface(self._window_surface))
         self._background.fill(self._manager.ui_theme.get_colour('dark_bg'))
 
@@ -450,7 +487,7 @@ class ProgressScreen:
             object_id=ObjectID('#progress_bar_label'))
 
 
-def load_music(path, volume=0):
+def load_music(path, volume=0.2):
     pygame.mixer.music.load(path)
     pygame.mixer.music.play()
     pygame.mixer.music.set_volume(volume)
@@ -471,7 +508,7 @@ class LoadingScreen:
         return self.thread.join()
 
     def load_parameters_for_channel(self):
-        names = get_people_names(self.channel_id, 'fr')
+        names = get_people_names(self.channel_id)
         get_people_pictures(names)
 
         generate_images(self.channel_id, 8)

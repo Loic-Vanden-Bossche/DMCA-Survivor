@@ -9,18 +9,19 @@ class GoogleImageDownloader(object):
     }
 
     def __init__(self, directory, name):
+        self.status = True
         self.dl_dir = directory
         self.filename = name['id']
         if os.path.exists(os.path.join(self.dl_dir, f"{self.filename}.jpg")): return;
         self.url = self._URL.format(urllib2.quote(name['name']))
-        self.initiate_downloads()
+        self.status = self.initiate_downloads()
 
     def initiate_downloads(self):
         try:
             soup = BeautifulSoup(urllib2.urlopen(urllib2.Request(self.url, headers=self._HEADERS)), 'html.parser')
             self.save_image([img['src'] for img in soup.find_all('img') if img.has_attr("src") and 'https' in img['src']][0])
         except Exception as e:
-            print("could not save image", e)
+            return False
 
     def save_image(self, src):
         req = urllib2.Request(src, headers=self._HEADERS)
