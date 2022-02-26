@@ -12,7 +12,7 @@ import utils
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, pos, groups, player_sprite, manager, name_object):
         super().__init__(groups)
-        self.image = utils.scale_surface_height(pygame.image.load(f"../graphics/pictures/{name_object['id']}.jpg").convert_alpha(), random.randint(90, 140))
+        self.image = self.load_image(name_object['id'])
         self.rect = self.image.get_rect(center=pos)
         self.target = player_sprite
         self.exploding = False
@@ -33,7 +33,16 @@ class Enemy(pygame.sprite.Sprite):
                                                          object_id=ObjectID('#timer_bar'))
 
         self.font = pygame.font.SysFont("Arial", 20)
-        self.label = self.font.render(name_object['name'], 1, 'white')
+        self.label = self.font.render(name_object['name'], True, 'white')
+
+    def load_image(self, img_id):
+        def load():
+            try:
+                return pygame.image.load(f"../graphics/pictures/{img_id}.jpg")
+            except Exception:
+                return pygame.image.load(f"../graphics/placeholder/enemy.jpg")
+
+        return utils.scale_surface_height(load().convert_alpha(), random.randint(90, 140))
 
     def set_direction(self):
         self.direction = (GOAL_X-self.rect.x, GOAL_Y-self.rect.y)
