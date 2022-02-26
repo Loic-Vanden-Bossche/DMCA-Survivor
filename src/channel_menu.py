@@ -2,10 +2,10 @@ import pygame
 import pygame_gui
 from pygame_gui.core import ObjectID
 
-from src import utils, loader
+import utils, loader
 
 from dynamic_background import Background
-from src.life_bar import LifeBar
+from life_bar import LifeBar
 
 
 class ChannelMenu:

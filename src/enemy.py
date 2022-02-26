@@ -6,7 +6,7 @@ from pygame_gui.core import ObjectID
 from settings import *
 import pygame_gui
 
-from src import utils
+import utils
 
 
 class Enemy(pygame.sprite.Sprite):

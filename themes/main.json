@@ -17,8 +17,7 @@
   "#search_button": {
     "images": {
       "normal_image": {
-        "resource": "search.png",
-        "package": "graphics"
+        "path": "../graphics/search.png"
       }
     }
   },

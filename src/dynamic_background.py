@@ -1,6 +1,6 @@
 import random
 import pygame
-from src import utils
+import utils
 
 
 class Background:

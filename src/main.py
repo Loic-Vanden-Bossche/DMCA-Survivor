@@ -1,6 +1,6 @@
 import pygame
 
-from src.main_menu import MainMenu
+from main_menu import MainMenu
 from settings import *
 
 class Game(MainMenu):

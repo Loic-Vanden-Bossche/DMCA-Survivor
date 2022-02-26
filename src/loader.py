@@ -16,16 +16,16 @@ from pytimeparse.timeparse import timeparse
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtubesearchpython import *
 
-from src import utils
-from src.scrapper import GoogleImageDownloader
-from src.settings import SAMPLE_SIZE
-from src.utils import ThreadWithReturnValue, part_array
+import utils
+from scrapper import GoogleImageDownloader
+from settings import SAMPLE_SIZE
+from utils import ThreadWithReturnValue, part_array
 
 t_lang = 'fr'
 
 models = {
-    'en': ('en_core_web_lg', 'PERSON'),
-    'fr': ('fr_core_news_lg', 'PER')
+    'fr': ('fr_core_news_lg', 'PER'),
+    'en': ('en_core_web_lg', 'PERSON')
 }
 
 isDebug = True
@@ -269,7 +269,7 @@ def get_people_names(channel_id):
         )), 'unique_names', channel_id)
 
 
-def spacy_init(lang='en'):
+def spacy_init(lang):
     try:
         lang = lang.lower()
         model_name, tag_name = models[lang]
@@ -282,7 +282,7 @@ def spacy_init(lang='en'):
         return spacy.load(model_name), model_name, tag_name, lang
     except KeyError:
         debug('Language not supported, using default')
-        return spacy.load('en_core_web_lg'), 'PERSON', 'en'
+        return models[0]
 
 
 def get_people_pictures(names):
@@ -366,7 +366,6 @@ def download_music_from_channel(channel_id, channel):
     while not completed:
         try:
             video_url = res[i]['link']
-            print(video_url)
             video_info = dlp.YoutubeDL().extract_info(
                 url=video_url, download=False
             )

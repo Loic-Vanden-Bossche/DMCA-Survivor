@@ -1,7 +1,7 @@
 import pygame
 
-from src import utils
-from src.level import Level
+import utils
+from level import Level
 
 
 class TowerDefense:

@@ -8,10 +8,10 @@ from pygame_gui.core import ObjectID
 from pygame_gui.elements import UIWindow, UITextEntryLine
 from youtubesearchpython import ChannelsSearch
 
-from src import utils, loader
-from src.channel_menu import ChannelMenu
-from src.loader import LoadingScreen
-from src.tower_defense import TowerDefense
+import utils, loader
+from channel_menu import ChannelMenu
+from loader import LoadingScreen
+from tower_defense import TowerDefense
 
 
 class SeamLessBackground:
