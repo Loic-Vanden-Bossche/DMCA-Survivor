@@ -8,10 +8,14 @@ from pygame_gui.core import ObjectID
 from pygame_gui.elements import UIWindow, UITextEntryLine
 from youtubesearchpython import ChannelsSearch
 
-import utils, loader
+import utils
 from channel_menu import ChannelMenu
 from loader import LoadingScreen
-from tower_defense import TowerDefense
+import loader
+
+
+def load_music():
+    loader.load_music('../music.mp3', 0.1)
 
 
 class SeamLessBackground:
@@ -215,9 +219,8 @@ class NewGameWindow(UIWindow):
         if self.selected_panel:
             if event.ui_element == self.selected_panel.button:
                 names = LoadingScreen(self.selected_panel.id).run()
-                difficulty = ChannelMenu(self.selected_panel.id, len(names)).run()
-
-                TowerDefense(difficulty, names).run()
+                ChannelMenu(self.selected_panel.id, names).run()
+                load_music()
 
     def __init__(self, ui_manager):
         window_width, window_height = pygame.display.get_window_size()
@@ -243,7 +246,7 @@ class NewGameWindow(UIWindow):
 
 class MainMenu:
     def run(self):
-        loader.load_music('../music.mp3', 0.1)
+        load_music()
 
         while self.running:
             time_delta = self.clock.tick(120) / 1000.0

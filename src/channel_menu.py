@@ -6,6 +6,7 @@ import utils, loader
 
 from dynamic_background import Background
 from life_bar import LifeBar
+from tower_defense import TowerDefense
 
 
 class ChannelMenu:
@@ -18,6 +19,10 @@ class ChannelMenu:
 
                 if event.type == pygame_gui.UI_BUTTON_PRESSED:
                     if event.ui_element == self.start_button:
+                        TowerDefense(self.get_life_from_dropdown_value(), self.names).run()
+                        self.running = False
+
+                    if event.ui_element == self.quit_button:
                         self.running = False
 
                 if event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED and event.ui_element == self.dropdown:
@@ -33,8 +38,6 @@ class ChannelMenu:
             self.life_bar.update()
             pygame.display.update()
 
-        return self.get_life_from_dropdown_value()
-
     def init_ui_manager(self):
         return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), '../themes/menu.json')
 
@@ -44,9 +47,9 @@ class ChannelMenu:
                                            manager=self.manager,
                                            object_id=ObjectID('#panel'))
 
-    def init_button(self, text, width, height):
+    def init_button(self, text, width, height, y_offset):
         return pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect(self.panel.relative_rect.w / 2 - (width / 2), self.panel.relative_rect.h - 90,
+            relative_rect=pygame.Rect(self.panel.relative_rect.w / 2 - (width / 2), self.panel.relative_rect.h - y_offset,
                                       width,
                                       height),
             text=text,
@@ -68,7 +71,7 @@ class ChannelMenu:
                                     self.panel)
 
         pygame_gui.elements.UILabel(pygame.Rect(0, 190, self.panel.relative_rect.w, 30),
-                                    f'{self.loaded_count} enemies loaded !',
+                                    f'{len(self.names)} enemies loaded !',
                                     self.manager,
                                     self.panel)
 
@@ -88,9 +91,9 @@ class ChannelMenu:
     def get_life_from_dropdown_value(self):
         return len(self.difficulties) - self.difficulties.index(self.difficulty)
 
-    def __init__(self, channel_id, loaded_count):
+    def __init__(self, channel_id, names):
         self.channel_id = channel_id
-        self.loaded_count = loaded_count
+        self.names = names
         pygame.display.set_caption('Channel menu')
         loader.load_music(f'../cache/{channel_id}/music.mp3')
         self.running = True
@@ -104,7 +107,8 @@ class ChannelMenu:
 
         self.panel = self.init_main_panel()
 
-        self.start_button = self.init_button('start game', 200, 30)
+        self.start_button = self.init_button('start game', 200, 30, 120)
+        self.quit_button = self.init_button('return to main menu', 200, 30, 80)
 
         self.thumb = utils.scale_surface_height(pygame.image.load(f'../cache/{channel_id}/thumb.jpg'), 100)
 

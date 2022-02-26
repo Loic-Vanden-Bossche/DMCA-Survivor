@@ -492,7 +492,7 @@ class ProgressScreen:
 
 def load_music(path, volume=0.2):
     pygame.mixer.music.load(path)
-    pygame.mixer.music.play()
+    pygame.mixer.music.play(loops=-1)
     pygame.mixer.music.set_volume(volume)
 
 
