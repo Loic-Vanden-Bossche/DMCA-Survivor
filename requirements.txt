@@ -1,10 +1,11 @@
 pygame==2.1.2
 pygame_gui==0.6.4
 pytimeparse==1.1.8
-requests==2.26.0
-scikit_image==0.19.1
-spacy==3.2.1
+requests==2.27.1
+scikit_image==0.19.2
+spacy==3.2.2
 youtube_dl==2021.12.17
 youtube_search_python==1.6.2
 youtube_transcript_api==0.4.3
 yt_dlp==2022.2.4
+beautifulsoup4==4.10.0

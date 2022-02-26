@@ -205,12 +205,14 @@ def part_str(f_str, n):
 
 
 def get_transcriptions_str(channel_id):
-    return functools.reduce(lambda a, b: a + f' {b}',
-                            [
-                                i['text'] for i in
-                                flatten([t for t in get_transcriptions_data(channel_id)['videos'].values() if
-                                         t is not None])
-                            ])
+
+    transcriptions = [
+        i['text'] for i in
+        flatten([t for t in get_transcriptions_data(channel_id)['videos'].values() if t is not None])
+    ]
+
+    set_progress_status('concatenating ...', 1)
+    return functools.reduce(lambda a, b: f'{a} {b}', transcriptions)
 
 
 def get_unique(arr):
@@ -274,7 +276,7 @@ def spacy_init(lang='en'):
 
         try:
             spacy.cli.info(model_name)
-        except Exception:
+        except BaseException:
             spacy.cli.download(model_name)
 
         return spacy.load(model_name), model_name, tag_name, lang
@@ -300,11 +302,13 @@ def get_people_pictures(names):
                             calculate_progress(i + (y * chunk_size), len(names)),
                             value.status)
         for y, chunk in enumerate(utils.chunk_array(names, chunk_size))
-        for i, value in enumerate(ThreadPool(len(names)).imap_unordered(functools.partial(GoogleImageDownloader, folder), chunk), 1)
+        for i, value in
+        enumerate(ThreadPool(len(names)).imap_unordered(functools.partial(GoogleImageDownloader, folder), chunk), 1)
     ]
 
     debug(f'{downloaded_status.count(True)} pictures downloaded with'
           f' {round(downloaded_status.count(True) / len(names) * 100, 3)}% accuracy')
+
 
 def make_montage(folder, data):
     index, arr = data
