@@ -46,6 +46,5 @@ class LifeBar:
 
         if center:
             self.x = self.x - (self.width / 2)
-            self.y = self.y - (self.height / 2)
 
         self._map = self._get_map(self.check_current_value(current_life, max_life), max_life)
