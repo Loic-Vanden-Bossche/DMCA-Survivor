@@ -58,7 +58,7 @@ class Player(pygame.sprite.Sprite):
         mouse_position = pygame.mouse.get_pos()
         angle = utils.get_angle_from_pos_to_pos(mouse_position, (GOAL_X, GOAL_Y))
 
-        self.image = pygame.transform.rotate(self.base_image, angle)
+        self.image = pygame.transform.rotate(self.base_image, angle+90)
         self.rect = self.image.get_rect(center=self.image.get_rect(center=(GOAL_X, GOAL_Y)).center)
 
         if self.life == 0:
