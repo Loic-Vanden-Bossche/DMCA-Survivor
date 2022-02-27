@@ -298,7 +298,8 @@ class MainMenu:
                 if event.ui_element == self.new_game_window.search_module.button:
                     self.on_search(self.new_game_window.search_module.text)
 
-            self.new_game_window.check_events(event)
+            if self.new_game_window:
+                self.new_game_window.check_events(event)
 
     def init_ui_manager(self):
         return pygame_gui.UIManager(utils.get_dims_from_surface(pygame.display.get_surface()), '../themes/main.json')
