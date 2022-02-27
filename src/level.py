@@ -1,4 +1,6 @@
 import pygame
+from pygame_gui.core import ObjectID
+
 from player import Player
 from enemy import Enemy
 from bullet import Bullet
@@ -28,6 +30,24 @@ class Names:
         shuffle(names)
         self._names = names
 
+class StatusBar(pygame_gui.elements.UIPanel):
+
+    @property
+    def wave(self):
+        return self.status_text.text
+
+    @wave.setter
+    def wave(self, wave):
+        self.status_text.set_text(f'Wave {wave}')
+
+    def __init__(self, width, manager):
+        super().__init__(pygame.Rect(pygame.display.get_surface().get_width() - width, 0, width, 75), 1, manager)
+
+        self.status_text = pygame_gui.elements.UILabel(
+            pygame.Rect(0, 0, self.relative_rect.w, self.relative_rect.h),
+            'wave 1', self.ui_manager, container=self, object_id=ObjectID('#wave_text'))
+
+
 
 def sprite_alive(sprite):
     return sprite.alive()
@@ -49,6 +69,7 @@ class Level:
         self.enemiesSpawned = 0
         self.enemiesNames = Names(names)
         self.channel_thumbs = [f'../cache/{channel_id}/video_thumbs/{video_file}' for video_file in utils.getFiles(f'../cache/{channel_id}/video_thumbs', '')]
+        self.status_bar = StatusBar(200, self._manager)
 
     def input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -93,9 +114,9 @@ class Level:
                     self.spawn_enemy()
 
             elif self.inFight and not len(self.enemies):
-                print(f"You've reached end of wave {self.wave}")
                 self.enemiesSpawnOffset = self.enemiesSpawnOffset * 0.85
                 self.wave += 1
+                self.status_bar.wave = self.wave
                 self.enemiesFactor += ENEMIES_FACTOR_AUGMENTATION
 
             for bullet in self.bullets:
