@@ -1,6 +1,7 @@
 import pygame
 
 from life_bar import LifeBar
+import utils
 
 
 class Player(pygame.sprite.Sprite):
@@ -8,6 +9,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__(groups)
         self.image = pygame.image.load('../graphics/placeholder/character.jpg').convert_alpha()
         self.rect = self.image.get_rect(center=pos)
+        self.arms = [utils.scale_surface_height(pygame.image.load(f'../graphics/{img}.png'), 80) for img in  ['left', 'right']]
         self._life = life
         self.bar = LifeBar(self.rect.x + (self.rect.width / 2),
                            self.rect.y + self.rect.height + 10, 20, self.life, 3, 10)
@@ -27,7 +29,14 @@ class Player(pygame.sprite.Sprite):
     def is_alive(self):
         return bool(self.life)
 
+    def update_arms(self):
+        left, right = self.arms
+        pygame.display.get_surface().blit(left, pygame.Rect(self.rect.x - left.get_width(), self.rect.y + 30, 0, 0))
+        pygame.display.get_surface().blit(right, pygame.Rect(self.rect.x + self.rect.width, self.rect.y + 30, 0, 0))
+
     def update(self):
         self.bar.update()
+        self.update_arms()
+
         if self.life == 0:
             self.kill()
