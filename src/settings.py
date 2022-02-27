@@ -1,7 +1,7 @@
 WIDTH = 1920
 HEIGHT = 1080
 NAME = 'DMCA - Survivor'
-FPS = 30
+FPS = 60
 
 # Player
 GOAL_X = WIDTH / 2

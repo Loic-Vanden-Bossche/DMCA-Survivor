@@ -69,7 +69,7 @@ class Level:
             self.enemiesNames.current))
         self.enemiesSpawned += 1
 
-    def run(self, time_delta):
+    def update(self, time_delta):
         self.bullets = list(filter(sprite_alive, self.bullets))
         self.enemies = list(filter(sprite_alive, self.enemies))
 

@@ -18,7 +18,7 @@ from youtubesearchpython import *
 
 import utils
 from scrapper import GoogleImageDownloader
-from settings import SAMPLE_SIZE
+from settings import *
 from utils import ThreadWithReturnValue, part_array
 
 t_lang = 'fr'
@@ -502,7 +502,7 @@ def load_music(path, volume=0.2):
 class LoadingScreen:
     def run(self):
         while self.running:
-            time_delta = self.clock.tick(60) / 1000.0
+            time_delta = self.clock.tick(FPS) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     utils.exit_app()

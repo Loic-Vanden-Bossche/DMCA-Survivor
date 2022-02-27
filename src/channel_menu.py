@@ -7,12 +7,12 @@ import utils, loader
 from dynamic_background import Background
 from life_bar import LifeBar
 from tower_defense import TowerDefense
-
+from settings import *
 
 class ChannelMenu:
     def run(self):
         while self.running:
-            time_delta = self.clock.tick(120) / 1000.0
+            time_delta = self.clock.tick(FPS) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     utils.exit_app()

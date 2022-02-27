@@ -254,7 +254,7 @@ class MainMenu:
         load_music()
 
         while self.running:
-            time_delta = self.clock.tick(120) / 1000.0
+            time_delta = self.clock.tick(FPS) / 1000.0
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     utils.exit_app()
