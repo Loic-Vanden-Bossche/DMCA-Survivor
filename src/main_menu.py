@@ -20,6 +20,7 @@ from scores import get_best_scores, difficulties
 def load_music():
     loader.load_music('../music.mp3', 0.1)
 
+
 def set_title():
     utils.set_game_title('Main menu')
 
@@ -45,7 +46,7 @@ class ScoresWindow(UIWindow):
                     ui_manager,
                     self, object_id=ObjectID('#20_text'))
             for i, d in enumerate(difficulties):
-                UILabel(pygame.Rect(15, 50 + (i*30), self.relative_rect.width, 50),
+                UILabel(pygame.Rect(15, 50 + (i * 30), self.relative_rect.width, 50),
                         f'- {d} : {scores[d]}',
                         ui_manager,
                         self, object_id=ObjectID('#10_text'))
@@ -56,6 +57,7 @@ class ScoresWindow(UIWindow):
                     self, object_id=ObjectID('#20_text'))
 
         self.set_blocking(True)
+
 
 class SeamLessBackground:
 
@@ -74,7 +76,7 @@ class SeamLessBackground:
 class SearchResult(pygame_gui.elements.UIPanel):
     def __init__(self, padding, height, width, index, y_offset, manager, container, channel_data):
         super().__init__(pygame.Rect((0 + padding, ((index * height) + (index * y_offset)) + padding), (width, height)),
-                         5, manager, container=container)
+                         5, manager, container=container, object_id=ObjectID('#result'))
 
         self.data = channel_data
 
@@ -103,7 +105,7 @@ class SearchResult(pygame_gui.elements.UIPanel):
                                                                width, height),
                                                    'select',
                                                    manager,
-                                                   self)
+                                                   self, object_id=ObjectID('#button'))
 
 
 class ScrollablePanel(pygame_gui.elements.UIPanel):
@@ -118,7 +120,7 @@ class ScrollablePanel(pygame_gui.elements.UIPanel):
         self.container.set_scrollable_area_dimensions((self.container.relative_rect.w - 30, self._scroll_height))
 
     def __init__(self, rect, ui_manager, panel):
-        super().__init__(rect, 0, manager=ui_manager, container=panel)
+        super().__init__(rect, 0, manager=ui_manager, container=panel, object_id=ObjectID('#result_container'))
 
         self.container = pygame_gui.elements.UIScrollingContainer(pygame.Rect(0, 0, self.relative_rect.w - 4,
                                                                               self.relative_rect.h - 4),
@@ -200,6 +202,17 @@ class SearchModule:
             text=''
         )
 
+        pygame_gui.elements.UILabel(
+            pygame.Rect(self.entry.relative_rect.x + 5,
+                        self.entry.relative_rect.y - 15,
+                        self.entry.relative_rect.w,
+                        20),
+            'Search for a YouTube channel',
+            container=container,
+            manager=ui_manager,
+            object_id=ObjectID('#search_text'),
+        )
+
         y_offset = 80
 
         self.results_container = SearchResults(pygame.Rect((padding, y_offset),
@@ -210,7 +223,7 @@ class SearchModule:
 
 class SelectedPanel(pygame_gui.elements.UIPanel):
     def __init__(self, relative_rect, manager, container, image: pygame.Surface, data):
-        super().__init__(relative_rect, 1, manager, container=container)
+        super().__init__(relative_rect, 1, manager, container=container, object_id=ObjectID('#sub_panel'))
 
         padding = 40
         pygame_gui.elements.UIImage(pygame.Rect(padding, padding, 200, 200), image, manager, self)
@@ -237,7 +250,7 @@ class SelectedPanel(pygame_gui.elements.UIPanel):
         self.button = pygame_gui.elements.UIButton(pygame.Rect(self.relative_rect.w - width - padding,
                                                                self.relative_rect.h - height - padding,
                                                                width, height),
-                                                   'start session', manager, self)
+                                                   'start session', manager, self, object_id=ObjectID('#button'))
 
 
 class NewGameWindow(UIWindow):
@@ -247,7 +260,7 @@ class NewGameWindow(UIWindow):
                                            starting_layer_height=4,
                                            manager=self._manager,
                                            container=self,
-                                           object_id=ObjectID('#panel'))
+                                           object_id=ObjectID('#sub_panel'))
 
     def calculate_Rect(self, idx):
 
@@ -359,16 +372,17 @@ class MainMenu:
         return pygame_gui.elements.UIPanel(relative_rect=utils.get_centered_rect(500, 800),
                                            starting_layer_height=4,
                                            manager=self._manager,
-                                           object_id=ObjectID('#panel'))
+                                           object_id=ObjectID('#main_panel'))
 
     def init_static_content(self):
-        pygame_gui.elements.UILabel(pygame.Rect(0, 10, self.panel.relative_rect.w, 80),
+        pygame_gui.elements.UILabel(pygame.Rect(0, 20, self.panel.relative_rect.w, 80),
                                     NAME,
                                     self._manager,
                                     object_id=ObjectID('#test'),
                                     container=self.panel)
 
-    def init_menu_button(self, label, width, height, y_offset=0):
+    def init_menu_button(self, data, width, height, y_offset=0):
+        label, theme_id = data
         return pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect(self.panel.relative_rect.w / 2 - (width / 2),
                                       self.panel.relative_rect.y + y_offset,
@@ -376,11 +390,11 @@ class MainMenu:
             text=label,
             manager=self._manager,
             container=self.panel,
-            object_id=ObjectID('#start_button'))
+            object_id=ObjectID(theme_id))
 
-    def init_menu_buttons(self, labels, width, height, y_offset, padding):
-        return [self.init_menu_button(label, width, height, (i * height) + y_offset + (i * padding)) for i, label in
-                enumerate(labels)]
+    def init_menu_buttons(self, datas, width, height, y_offset, padding):
+        return [self.init_menu_button(data, width, height, (i * height) + y_offset + (i * padding)) for i, data in
+                enumerate(datas)]
 
     def __init__(self):
         self.back = utils.scale_surface_height(pygame.image.load('../graphics/background.jpg'),
@@ -394,8 +408,8 @@ class MainMenu:
         self.panel = self.init_main_panel()
 
         self.new_game_button, self.scores_button, self.quit_button = self.init_menu_buttons(
-            ['new game', 'scores', 'quit'],
-            300, 40, 100, 20
+            [('New Game', '#button1'), ('Scores', '#button2'), ('Quit', '#button3')],
+            300, 70, 100, 20
         )
 
         self.init_static_content()
