@@ -6,6 +6,8 @@ from settings import *
 import pygame_gui
 from random import *
 
+import utils
+
 
 class Names:
 
@@ -46,11 +48,12 @@ class Level:
         self.inFight = True
         self.enemiesSpawned = 0
         self.enemiesNames = Names(names)
+        self.channel_thumbs = [f'../cache/{channel_id}/video_thumbs/{video_file}' for video_file in utils.getFiles(f'../cache/{channel_id}/video_thumbs', '')]
 
     def input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and self.player.is_alive():
-                self.bullets.append(Bullet((self.visible_sprites,)))
+                self.bullets.append(Bullet(self.channel_thumbs, (self.visible_sprites,)))
 
     def get_level_scores(self):
         return self.wave

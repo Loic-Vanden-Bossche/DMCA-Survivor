@@ -1,12 +1,16 @@
+from random import choice
+
 import pygame
 import math
 from settings import *
+import utils
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, groups):
+    def __init__(self, thumbs, groups):
         super().__init__(groups)
-        self.image = pygame.image.load('../graphics/placeholder/bullet.jpg').convert_alpha()
+        self.get_random_thumb(thumbs)
+        self.image = self.get_random_thumb(thumbs)
         self.rect = self.image.get_rect(center=GOAL)
         self.target = []
 
@@ -20,7 +24,10 @@ class Bullet(pygame.sprite.Sprite):
             self.direction = (self.direction[0]/length, self.direction[1]/length)
 
         angle = math.degrees(math.atan2(-self.direction[1], self.direction[0]))
-        self.image = pygame.transform.rotate(self.image, angle-90)
+        self.image = pygame.transform.rotate(self.image, angle)
+
+    def get_random_thumb(self, thumbs):
+        return utils.scale_surface_height(pygame.image.load(choice(thumbs)).convert_alpha(), 30)
 
     def move(self):
         self.rect = self.rect.move(self.direction[0]*BULLET_SPEED, self.direction[1]*BULLET_SPEED)
