@@ -212,10 +212,23 @@ class SelectedPanel(pygame_gui.elements.UIPanel):
     def __init__(self, relative_rect, manager, container, image: pygame.Surface, data):
         super().__init__(relative_rect, 1, manager, container=container)
 
-        pygame_gui.elements.UIImage(pygame.Rect(0, 0, 300, 300),
-                                    image,
-                                    manager,
-                                    self)
+        padding = 40
+        pygame_gui.elements.UIImage(pygame.Rect(padding, padding, 200, 200), image, manager, self)
+
+        UILabel(pygame.Rect(padding, 250, self.relative_rect.width, 50),
+                data['name'],
+                manager,
+                self, object_id=ObjectID('#lefttext'))
+
+        UILabel(pygame.Rect(padding, 280, self.relative_rect.width, 50),
+                f"• {data['sub']}",
+                manager,
+                self, object_id=ObjectID('#lefttext'))
+
+        UILabel(pygame.Rect(padding, 310, self.relative_rect.width, 50),
+                f"• {data['v_count']} videos",
+                manager,
+                self, object_id=ObjectID('#lefttext'))
 
         width, height, padding = (150, 50, 30)
 
