@@ -1,13 +1,80 @@
 import pygame
 import pygame_gui
 from pygame_gui.core import ObjectID
+from pygame_gui.elements import UIWindow, UILabel
 
-import utils, loader
-
+import loader
+import utils
 from dynamic_background import Background
 from life_bar import LifeBar
-from tower_defense import TowerDefense
 from settings import *
+from tower_defense import TowerDefense
+
+difficulties = ['easy', 'medium', 'hard']
+
+def get_best_scores():
+    try:
+        with open('../cache/scores', 'r', encoding='utf-8') as f:
+            return eval(f.read())
+    except FileNotFoundError:
+        return None
+
+def get_best_scores_for_difficulty(difficulty):
+    scores = get_best_scores()
+    if not scores:
+        return 1
+    else:
+        return scores[difficulty]
+
+def set_best_scores(wave, difficulty):
+    scores = get_best_scores()
+    updated = False
+
+    if not scores:
+        scores = {d: 0 for d in difficulties}
+
+    if scores[difficulty] < wave:
+        scores[difficulty] = wave
+        updated = True
+
+    with open('../cache/scores', 'w', encoding='utf-8') as f:
+        f.write(str(scores))
+
+    return updated
+
+
+class LevelSummaryWindow(UIWindow):
+    def __init__(self, ui_manager, wave, difficulty):
+        window_width, window_height = pygame.display.get_window_size()
+        width = window_width / 3
+        height = window_height / 5
+
+        score_updated = set_best_scores(wave, difficulty)
+
+        super().__init__(
+            pygame.Rect((window_width / 2) - (width / 2), (window_height / 2) - (height / 2), width, height),
+            ui_manager,
+            window_display_title='Session summary',
+        )
+
+        UILabel(pygame.Rect(0, 20, self.relative_rect.width, 50),
+                f'You reached wave {wave} !',
+                ui_manager,
+                self, object_id=ObjectID('#30_text'))
+
+        if score_updated:
+            UILabel(pygame.Rect(0, 60, self.relative_rect.width, 20),
+                    'Well done ! You beat your best score.',
+                    ui_manager,
+                    self, object_id=ObjectID('#10_text'))
+
+        UILabel(pygame.Rect(0, 80, self.relative_rect.width, 50),
+                f'Your best score is {get_best_scores_for_difficulty(difficulty)} for difficulty {difficulty}',
+                ui_manager,
+                self, object_id=ObjectID('#20_text'))
+
+        self.set_blocking(True)
+
 
 class ChannelMenu:
     def run(self):
@@ -19,8 +86,12 @@ class ChannelMenu:
 
                 if event.type == pygame_gui.UI_BUTTON_PRESSED:
                     if event.ui_element == self.start_button:
-                        TowerDefense(self.get_life_from_dropdown_value(), self.names).run()
-                        self.running = False
+                        self.summary_window = LevelSummaryWindow(
+                            self.manager,
+                            TowerDefense(self.get_life_from_dropdown_value(), self.names).run(),
+                            self.difficulty
+                        )
+                        self.life_bar.display = False
 
                     if event.ui_element == self.quit_button:
                         self.running = False
@@ -28,6 +99,9 @@ class ChannelMenu:
                 if event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED and event.ui_element == self.dropdown:
                     self.difficulty = self.dropdown.selected_option
                     self.life_bar.current_life = self.get_life_from_dropdown_value()
+
+                if event.type == pygame_gui.UI_WINDOW_CLOSE and event.ui_element == self.summary_window:
+                    self.life_bar.display = True
 
                 self.manager.process_events(event)
 
@@ -98,7 +172,7 @@ class ChannelMenu:
         loader.load_music(f'../cache/{channel_id}/music.mp3')
         self.running = True
 
-        self.difficulties = ['easy', 'medium', 'hard']
+        self.difficulties = difficulties
         self.difficulty = 'medium'
 
         self.background = Background(channel_id, 8)
@@ -106,6 +180,8 @@ class ChannelMenu:
         self.manager = self.init_ui_manager()
 
         self.panel = self.init_main_panel()
+
+        self.summary_window = None
 
         self.start_button = self.init_button('start game', 200, 30, 120)
         self.quit_button = self.init_button('return to main menu', 200, 30, 80)

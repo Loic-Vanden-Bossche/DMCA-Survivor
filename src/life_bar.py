@@ -4,11 +4,12 @@ import utils
 class LifeBar:
 
     def update(self):
-        for i, x in enumerate(self._map):
-            if x:
-                pygame.display.get_surface().blit(self.filled, ((i*self.sprite_width) + (self.padding*i) + self.x, self.y))
-            else:
-                pygame.display.get_surface().blit(self.unfilled, ((i*self.sprite_width) + (self.padding*i) + self.x, self.y))
+        if self.display:
+            for i, x in enumerate(self._map):
+                if x:
+                    pygame.display.get_surface().blit(self.filled, ((i*self.sprite_width) + (self.padding*i) + self.x, self.y))
+                else:
+                    pygame.display.get_surface().blit(self.unfilled, ((i*self.sprite_width) + (self.padding*i) + self.x, self.y))
 
     def _get_map(self, current_life, max_life):
         return [1 if x < current_life else 0 for x in range(0, max_life)]
@@ -43,6 +44,8 @@ class LifeBar:
 
         self.width = (self.sprite_width * max_life) + (padding * (max_life-1))
         self.height = height
+
+        self.display = True
 
         if center:
             self.x = self.x - (self.width / 2)

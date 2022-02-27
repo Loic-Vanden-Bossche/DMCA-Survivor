@@ -52,8 +52,11 @@ class Level:
             if event.button == 1 and self.player.is_alive():
                 self.bullets.append(Bullet((self.visible_sprites,)))
 
+    def get_level_scores(self):
+        return self.wave
+
     def spawn_enemy(self):
-        if choice([0, 1]):
+        if choice([False, True]):
             x_position = randint(-30, WIDTH + 30)
             y_position = choice([randint(-30, 0), randint(HEIGHT, HEIGHT + 30)])
 

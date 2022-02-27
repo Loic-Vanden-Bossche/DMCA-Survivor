@@ -90,5 +90,4 @@ class Enemy(pygame.sprite.Sprite):
             self.life_bar.kill()
             self.timer_bar.kill()
             self.kill()
-            print('mort')
             del self

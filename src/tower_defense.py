@@ -22,6 +22,8 @@ class TowerDefense:
             self.level.update(time_delta)
             pygame.display.update()
 
+        return self.level.get_level_scores()
+
     def __init__(self, difficulty, names):
         self.running = True
         self.clock = pygame.time.Clock()

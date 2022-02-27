@@ -326,7 +326,7 @@ def generate_images(channel_id, rows):
     arrays = part_array(list(get_transcriptions_data(channel_id)['videos'].keys()), rows)
 
     if len(arrays) > rows:
-        arrays = arrays[-1]
+        arrays = arrays[:-1]
 
     folder = f'../cache/{channel_id}/background_cache'
 
