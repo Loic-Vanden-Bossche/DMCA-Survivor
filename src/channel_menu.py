@@ -57,7 +57,7 @@ class ChannelMenu:
                     if event.ui_element == self.start_button:
                         self.summary_window = LevelSummaryWindow(
                             self.manager,
-                            TowerDefense(self.get_life_from_dropdown_value(), self.names).run(),
+                            TowerDefense(self.channel_data['id'], self.get_life_from_dropdown_value(), self.names).run(),
                             self.difficulty
                         )
                         self.life_bar.display = False

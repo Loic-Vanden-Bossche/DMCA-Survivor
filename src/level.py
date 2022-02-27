@@ -32,11 +32,11 @@ def sprite_alive(sprite):
 
 
 class Level:
-    def __init__(self, difficulty, names):
+    def __init__(self, channel_id,  difficulty, names):
         self._manager = pygame_gui.UIManager((WIDTH, HEIGHT), '../themes/game.json')
         self.display_surface = pygame.display.get_surface()
         self.visible_sprites = pygame.sprite.Group()
-        self.player = Player(GOAL, (self.visible_sprites,), difficulty)
+        self.player = Player(channel_id, GOAL, (self.visible_sprites,), difficulty)
         self.enemies = []
         self.bullets = []
         self.wave = 1

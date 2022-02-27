@@ -24,11 +24,11 @@ class TowerDefense:
 
         return self.level.get_level_scores()
 
-    def __init__(self, difficulty, names):
+    def __init__(self, channel_id, difficulty, names):
         self.running = True
         self.clock = pygame.time.Clock()
 
         self.back = utils.scale_surface_with(pygame.image.load('../graphics/background_game.jpg'),
                                              pygame.display.get_surface().get_width())
 
-        self.level = Level(difficulty, names)
+        self.level = Level(channel_id, difficulty, names)

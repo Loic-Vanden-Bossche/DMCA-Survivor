@@ -5,9 +5,9 @@ import utils
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, life):
+    def __init__(self, channel_id, pos, groups, life):
         super().__init__(groups)
-        self.image = pygame.image.load('../graphics/placeholder/character.jpg').convert_alpha()
+        self.image = utils.scale_surface_height(self.load_image(channel_id), 100)
         self.rect = self.image.get_rect(center=pos)
         self.arms = [utils.scale_surface_height(pygame.image.load(f'../graphics/{img}.png'), 80) for img in  ['left', 'right']]
         self._life = life
@@ -25,6 +25,12 @@ class Player(pygame.sprite.Sprite):
 
     def take_damage(self):
         self.life -= 1
+
+    def load_image(self, channel_id):
+        try:
+            return pygame.image.load(f'../cache/{channel_id}/thumb.jpg')
+        except Exception:
+            return pygame.image.load('../graphics/placeholder/character.jpg').convert_alpha()
 
     def is_alive(self):
         return bool(self.life)
