@@ -1,7 +1,9 @@
 import functools
+import io
 import math
 import os
 from multiprocessing.pool import ThreadPool
+from urllib.request import urlopen
 from uuid import uuid5, UUID
 
 import pygame
@@ -312,10 +314,16 @@ def get_people_pictures(names):
 
 def make_montage(folder, data):
     index, arr = data
-    img = f'{folder}/img_carrousel_{index}.png'
+    img = f'{folder}/background_cache/img_carrousel_{index}.png'
+
+    def process_image(video_id):
+        image = skimage.io.imread(f'https://img.youtube.com/vi/{video_id}/0.jpg')
+        skimage.io.imsave(f'{folder}/video_thumbs/{video_id}.jpg', image)
+        return image
+
     if not os.path.exists(img):
         skimage.io.imsave(img, skimage.util.montage([
-            skimage.io.imread(f'https://img.youtube.com/vi/{video_id}/0.jpg') for
+            process_image(video_id) for
             video_id in
             arr
         ], channel_axis=3, grid_shape=(1, len(arr))))
@@ -328,10 +336,13 @@ def generate_images(channel_id, rows):
     if len(arrays) > rows:
         arrays = arrays[:-1]
 
-    folder = f'../cache/{channel_id}/background_cache'
+    folder = f'../cache/{channel_id}'
 
-    if not os.path.exists(folder):
-        os.makedirs(folder)
+    if not os.path.exists(f'{folder}/background_cache'):
+        os.makedirs(f'{folder}/background_cache')
+
+    if not os.path.exists(f'{folder}/video_thumbs'):
+        os.makedirs(f'{folder}/video_thumbs')
 
     reset_progress('montage')
 
