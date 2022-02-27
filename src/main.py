@@ -2,13 +2,15 @@ import pygame
 
 from main_menu import MainMenu
 from settings import *
+import utils
+
 
 class Game(MainMenu):
     def __init__(self):
         # general setup
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption('Zelda')
+        utils.set_game_title('Init')
         super().__init__()
 
 

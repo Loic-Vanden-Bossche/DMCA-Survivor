@@ -66,7 +66,7 @@ class ChannelMenu:
 
     def init_static_content(self):
         pygame_gui.elements.UILabel(pygame.Rect(0, 140, self.panel.relative_rect.w, 30),
-                                    loader.get_transcriptions_data(self.channel_id)['channel']['name'],
+                                    self.channel_data['name'],
                                     self.manager,
                                     self.panel)
 
@@ -92,9 +92,9 @@ class ChannelMenu:
         return len(self.difficulties) - self.difficulties.index(self.difficulty)
 
     def __init__(self, channel_id, names):
-        self.channel_id = channel_id
+        self.channel_data = loader.get_transcriptions_data(channel_id)['channel']
         self.names = names
-        pygame.display.set_caption('Channel menu')
+        utils.set_game_title(self.channel_data['name'])
         loader.load_music(f'../cache/{channel_id}/music.mp3')
         self.running = True
 

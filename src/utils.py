@@ -2,7 +2,7 @@ import os
 import sys
 from threading import Thread
 import pygame
-
+from settings import *
 
 class ThreadWithReturnValue(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
@@ -52,6 +52,11 @@ def part_array(arr, n):
 def chunk_array(arr, n):
     return [arr[i * n:(i + 1) * n] for i in range((len(arr) + n - 1) // n )]
 
+
 def exit_app():
     pygame.quit()
     sys.exit()
+
+
+def set_game_title(title):
+    pygame.display.set_caption(f'{NAME} - {title}')

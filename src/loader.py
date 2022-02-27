@@ -323,7 +323,10 @@ def make_montage(folder, data):
 
 
 def generate_images(channel_id, rows):
-    arrays = part_array(list(get_transcriptions_data(channel_id)['videos'].keys()), rows)[:-1]
+    arrays = part_array(list(get_transcriptions_data(channel_id)['videos'].keys()), rows)
+
+    if len(arrays) > rows:
+        arrays = arrays[-1]
 
     folder = f'../cache/{channel_id}/background_cache'
 
@@ -525,7 +528,7 @@ class LoadingScreen:
         self.channel_id = channel_id
         self.running = True
 
-        pygame.display.set_caption('loading ....')
+        utils.set_game_title('Loading ...')
 
         self.thread = ThreadWithReturnValue(target=self.load_parameters_for_channel)
         self.thread.start()

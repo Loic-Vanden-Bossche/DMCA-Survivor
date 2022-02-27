@@ -12,10 +12,14 @@ import utils
 from channel_menu import ChannelMenu
 from loader import LoadingScreen
 import loader
+from settings import *
 
 
 def load_music():
     loader.load_music('../music.mp3', 0.1)
+
+def set_title():
+    utils.set_game_title('Main menu')
 
 
 class SeamLessBackground:
@@ -221,6 +225,7 @@ class NewGameWindow(UIWindow):
                 names = LoadingScreen(self.selected_panel.id).run()
                 ChannelMenu(self.selected_panel.id, names).run()
                 load_music()
+                set_title()
 
     def __init__(self, ui_manager):
         window_width, window_height = pygame.display.get_window_size()
@@ -306,7 +311,7 @@ class MainMenu:
 
     def init_static_content(self):
         pygame_gui.elements.UILabel(pygame.Rect(0, 10, self.panel.relative_rect.w, 80),
-                                    'DMCA - Survivor',
+                                    NAME,
                                     self._manager,
                                     object_id=ObjectID('#test'),
                                     container=self.panel)
@@ -330,7 +335,7 @@ class MainMenu:
                                                pygame.display.get_surface().get_height())
         self.running = True
 
-        pygame.display.set_caption('Main menu')
+        set_title()
 
         self._manager = self.init_ui_manager()
 

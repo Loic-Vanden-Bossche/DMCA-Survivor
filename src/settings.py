@@ -1,5 +1,6 @@
 WIDTH = 1920
 HEIGHT = 1080
+NAME = 'DMCA - Survivor'
 FPS = 30
 
 # Player
