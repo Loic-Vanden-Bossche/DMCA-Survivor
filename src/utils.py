@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 from threading import Thread
@@ -63,3 +64,17 @@ def exit_app():
 
 def set_game_title(title):
     pygame.display.set_caption(f'{NAME} - {title}')
+
+
+def get_angle_from_pos_to_pos(mouse_position, pos):
+    x, y = pos
+
+    direction = (mouse_position[0] - x, mouse_position[1] - y)
+
+    length = math.hypot(*direction)
+    if length == 0.0:
+        direction = (0, -1)
+    else:
+        direction = (direction[0] / length, direction[1] / length)
+
+    return math.degrees(math.atan2(-direction[1], direction[0]))
