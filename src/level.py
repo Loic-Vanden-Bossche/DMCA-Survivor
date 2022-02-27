@@ -36,7 +36,7 @@ class Level:
         self._manager = pygame_gui.UIManager((WIDTH, HEIGHT), '../themes/game.json')
         self.display_surface = pygame.display.get_surface()
         self.visible_sprites = pygame.sprite.Group()
-        self.player = Player(GOAL, [self.visible_sprites], difficulty)
+        self.player = Player(GOAL, (self.visible_sprites,), difficulty)
         self.enemies = []
         self.bullets = []
         self.wave = 1
@@ -50,7 +50,7 @@ class Level:
     def input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and self.player.is_alive():
-                self.bullets.append(Bullet([self.visible_sprites]))
+                self.bullets.append(Bullet((self.visible_sprites,)))
 
     def spawn_enemy(self):
         if choice([0, 1]):
@@ -63,7 +63,7 @@ class Level:
 
         self.enemies.append(Enemy(
             (x_position, y_position),
-            [self.visible_sprites],
+            (self.visible_sprites,),
             self.player,
             self._manager,
             self.enemiesNames.current))
