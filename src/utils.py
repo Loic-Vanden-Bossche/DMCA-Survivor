@@ -40,6 +40,9 @@ def get_dims_from_display():
 def scale_surface_height(surface: pygame.Surface, height: int):
     return pygame.transform.smoothscale(surface, (height * (surface.get_width() / surface.get_height()), height))
 
+def scale_surface_with(surface: pygame.Surface, width: int):
+    return pygame.transform.smoothscale(surface, (width, width * (surface.get_height() / surface.get_width())))
+
 
 def getFiles(folder, start='data_'):
     return [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f)) and f.startswith(start)]

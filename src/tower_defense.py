@@ -18,7 +18,7 @@ class TowerDefense:
             if not self.level.player.is_alive():
                 self.running = False
 
-            pygame.display.get_surface().fill('black')
+            pygame.display.get_surface().blit(self.back, pygame.Rect((0, 0), (200, 200)))
             self.level.update(time_delta)
             pygame.display.update()
 
@@ -27,5 +27,8 @@ class TowerDefense:
     def __init__(self, difficulty, names):
         self.running = True
         self.clock = pygame.time.Clock()
+
+        self.back = utils.scale_surface_with(pygame.image.load('../graphics/background_game.jpg'),
+                                             pygame.display.get_surface().get_width())
 
         self.level = Level(difficulty, names)
