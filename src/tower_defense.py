@@ -7,28 +7,28 @@ from settings import *
 
 class TowerDefense:
     def run(self):
-        while self.running:
-            time_delta = self.clock.tick(FPS)/1000
+        while self._running:
+            time_delta = self._clock.tick(FPS)/1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     utils.exit_app()
 
-                self.level.input(event)
+                self._level.input(event)
 
-            if not self.level.player.is_alive():
-                self.running = False
+            if not self._level.player.is_alive():
+                self._running = False
 
-            pygame.display.get_surface().blit(self.back, pygame.Rect((0, 0), (200, 200)))
-            self.level.update(time_delta)
+            pygame.display.get_surface().blit(self._back, pygame.Rect((0, 0), (200, 200)))
+            self._level.update(time_delta)
             pygame.display.update()
 
-        return self.level.get_level_scores()
+        return self._level.get_level_scores()
 
     def __init__(self, channel_id, difficulty, names):
-        self.running = True
-        self.clock = pygame.time.Clock()
+        self._running = True
+        self._clock = pygame.time.Clock()
 
-        self.back = utils.scale_surface_with(pygame.image.load('../graphics/background_game.jpg'),
+        self._back = utils.scale_surface_with(pygame.image.load('../graphics/background_game.jpg'),
                                              pygame.display.get_surface().get_width())
 
-        self.level = Level(channel_id, difficulty, names)
+        self._level = Level(channel_id, difficulty, names)
