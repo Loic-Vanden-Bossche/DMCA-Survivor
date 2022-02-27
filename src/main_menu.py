@@ -5,7 +5,7 @@ from urllib.request import urlopen
 import pygame
 import pygame_gui
 from pygame_gui.core import ObjectID
-from pygame_gui.elements import UIWindow, UITextEntryLine
+from pygame_gui.elements import UIWindow, UITextEntryLine, UILabel
 from youtubesearchpython import ChannelsSearch
 
 import utils
@@ -14,6 +14,8 @@ from loader import LoadingScreen
 import loader
 from settings import *
 
+from scores import get_best_scores, difficulties
+
 
 def load_music():
     loader.load_music('../music.mp3', 0.1)
@@ -21,6 +23,39 @@ def load_music():
 def set_title():
     utils.set_game_title('Main menu')
 
+
+class ScoresWindow(UIWindow):
+
+    def __init__(self, ui_manager):
+        window_width, window_height = pygame.display.get_window_size()
+        width = window_width / 3
+        height = window_height / 4
+
+        super().__init__(
+            pygame.Rect((window_width / 2) - (width / 2), (window_height / 2) - (height / 2), width, height),
+            ui_manager,
+            window_display_title='Scores',
+        )
+
+        scores = get_best_scores()
+
+        if scores:
+            UILabel(pygame.Rect(15, 10, self.relative_rect.width, 50),
+                    'Best scores for difficulties :',
+                    ui_manager,
+                    self, object_id=ObjectID('#20_text'))
+            for i, d in enumerate(difficulties):
+                UILabel(pygame.Rect(15, 50 + (i*30), self.relative_rect.width, 50),
+                        f'- {d} : {scores[d]}',
+                        ui_manager,
+                        self, object_id=ObjectID('#10_text'))
+        else:
+            UILabel(pygame.Rect(15, 20, self.relative_rect.width, 50),
+                    'No scores available.',
+                    ui_manager,
+                    self, object_id=ObjectID('#20_text'))
+
+        self.set_blocking(True)
 
 class SeamLessBackground:
 
@@ -294,6 +329,9 @@ class MainMenu:
             if event.ui_element == self.new_game_button:
                 self.new_game_window = NewGameWindow(self._manager)
 
+            if event.ui_element == self.scores_button:
+                self.scores_window = ScoresWindow(self._manager)
+
             if self.new_game_window:
                 if event.ui_element == self.new_game_window.search_module.button:
                     self.on_search(self.new_game_window.search_module.text)
@@ -350,5 +388,6 @@ class MainMenu:
         self.init_static_content()
 
         self.new_game_window = None
+        self.scores_window = None
 
         self.clock = pygame.time.Clock()
